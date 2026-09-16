@@ -46,7 +46,9 @@ public sealed class TallyXmlResponseParser
                 .SelectMany(x => x.Elements().Where(y => IsNamed(y, "ACCOUNTINGALLOCATIONS.LIST") && Value(y, "LEDGERNAME") is not null)))
             .Select(ParseLedgerEntry)
             .ToList();
-        return new VoucherInfo(Value(voucher, "MASTERID") ?? Value(voucher, "GUID") ?? Value(voucher, "VOUCHERNUMBER") ?? throw new TallyProtocolException("Voucher response contains no identifier."), Value(voucher, "VOUCHERNUMBER"), ParseDate(Value(voucher, "DATE")), Value(voucher, "VOUCHERTYPENAME") ?? Value(voucher, "VCHTYPE") ?? "Unknown", Value(voucher, "NARRATION"), entries, null, null, null, Value(voucher, "REFERENCE"), Value(voucher, "PARTYLEDGERNAME"));
+        var masterId = Value(voucher, "MASTERID");
+        var guid = Value(voucher, "GUID");
+        return new VoucherInfo(masterId ?? guid ?? Value(voucher, "VOUCHERNUMBER") ?? throw new TallyProtocolException("Voucher response contains no identifier."), Value(voucher, "VOUCHERNUMBER"), ParseDate(Value(voucher, "DATE")), Value(voucher, "VOUCHERTYPENAME") ?? Value(voucher, "VCHTYPE") ?? "Unknown", Value(voucher, "NARRATION"), entries, null, null, null, Value(voucher, "REFERENCE"), Value(voucher, "PARTYLEDGERNAME"), guid, masterId);
     }
 
     private static VoucherEntryInfo ParseLedgerEntry(XElement entry)

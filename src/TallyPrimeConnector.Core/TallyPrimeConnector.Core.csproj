@@ -1,1 +1,1 @@
-<Project Sdk="Microsoft.NET.Sdk"><ItemGroup><ProjectReference Include="../TallyPrimeConnector.Contracts/TallyPrimeConnector.Contracts.csproj" /></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk"><ItemGroup><ProjectReference Include="../TallyPrimeConnector.Contracts/TallyPrimeConnector.Contracts.csproj" /><PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" /></ItemGroup></Project>

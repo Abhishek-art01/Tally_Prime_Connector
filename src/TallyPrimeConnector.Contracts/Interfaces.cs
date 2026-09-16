@@ -9,5 +9,5 @@ public interface ITallyCollectionProvider { Task<IReadOnlyList<GroupInfo>> GetGr
 public interface ITallyVoucherProvider { Task<IReadOnlyList<VoucherInfo>> GetVouchersAsync(CompanyInfo company, DateOnly from, DateOnly to, CancellationToken cancellationToken); }
 public interface IExtractionProgressReporter { void Report(ExtractionProgress progress); }
 public interface IExcelExporter { Task<string> ExportAsync(IEnumerable<VoucherInfo> vouchers, string outputPath, CancellationToken cancellationToken); }
-public interface ILedgerWorkbookExporter : IExcelExporter { }
+public interface ILedgerWorkbookExporter : IExcelExporter { Task<string> ExportAsync(LedgerWiseExtractionResult extraction, CancellationToken cancellationToken); }
 public interface IUpdateService { Task<bool> IsUpdateAvailableAsync(CancellationToken cancellationToken); }

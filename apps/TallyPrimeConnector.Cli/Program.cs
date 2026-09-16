@@ -1,5 +1,8 @@
 using TallyPrimeConnector.Contracts;
+using TallyPrimeConnector.Core;
+using TallyPrimeConnector.Excel;
 using TallyPrimeConnector.Tally;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace TallyPrimeConnector.Cli;
 
@@ -66,6 +69,46 @@ internal static class Program
                     Console.WriteLine($"Ledger voucher numbers: {string.Join(", ", ledgerScoped.Select(x => x.VoucherNumber ?? x.SourceId))}");
                 }
                 return scopeDiagnostic.DateScopePass && scopeDiagnostic.UnbalancedVoucherNumbers.Count == 0 ? 0 : 1;
+            case "ledger-export":
+                if (args.Length is < 5 || !DateOnly.TryParse(args[1], out var exportFrom) || !DateOnly.TryParse(args[2], out var exportTo))
+                {
+                    Console.Error.WriteLine("Usage: ledger-export YYYY-MM-DD YYYY-MM-DD output.xlsx [--batch-days N] ledger [ledger ...]");
+                    return 2;
+                }
+                // This command is a composition root: protocol-specific providers are kept behind Core services.
+                var exportClient = new TallyXmlHttpClient();
+                var exportParser = new TallyXmlResponseParser();
+                var exportCompany = (await new TallyXmlCompanyProvider(exportClient, exportParser).GetCompaniesAsync(profile, CancellationToken.None)).FirstOrDefault();
+                if (exportCompany is null) { Console.Error.WriteLine("No current Tally company was returned."); return 1; }
+                var allLedgers = await new TallyXmlCollectionProvider(exportClient, exportParser, profile).GetLedgersAsync(exportCompany, null, CancellationToken.None);
+                var batchDays = LedgerWiseExtractionRequest.DefaultBatchDays;
+                var ledgerArgumentIndex = 4;
+                if (args.Length > 6 && string.Equals(args[4], "--batch-days", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!int.TryParse(args[5], out batchDays) || batchDays < 1) { Console.Error.WriteLine("Batch size must be at least one day."); return 2; }
+                    ledgerArgumentIndex = 6;
+                }
+                var requestedLedgerNames = args.Skip(ledgerArgumentIndex).ToList();
+                if (requestedLedgerNames.Count == 0) { Console.Error.WriteLine("At least one ledger must be selected."); return 2; }
+                var selectedLedgers = requestedLedgerNames.Select(name => allLedgers.FirstOrDefault(ledger => string.Equals(ledger.Name.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase))).ToList();
+                if (selectedLedgers.Any(x => x is null))
+                {
+                    var missingLedgers = requestedLedgerNames.Where(name => allLedgers.All(ledger => !string.Equals(ledger.Name.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase)));
+                    Console.Error.WriteLine("One or more selected ledgers were not returned by Tally: " + string.Join(", ", missingLedgers));
+                    return 1;
+                }
+                var exportRequest = LedgerWiseExtractionRequest.Create(new CompanyContext(exportCompany, profile), DateRange.Create(exportFrom, exportTo), null, selectedLedgers!.Cast<LedgerInfo>().ToList(), args[3], batchDays);
+                var liveVoucherService = new VoucherService(new TallyXmlVoucherProvider(exportClient, exportParser, profile));
+                var coreExtraction = new LedgerWiseExtractionService(liveVoucherService, NullLogger<LedgerWiseExtractionService>.Instance);
+                var workflow = new LedgerWiseExportService(coreExtraction, new LedgerWorkbookExporter(), NullLogger<LedgerWiseExportService>.Instance);
+                var exportProgress = new Progress<ExtractionProgress>(value => Console.WriteLine($"{value.Stage}: batch {value.CurrentBatch}/{value.TotalBatches}; {value.Percent}%; vouchers {value.RecordsFound}; matched {value.MatchedTransactions}"));
+                var exportResult = await workflow.ExtractAndExportAsync(exportRequest, exportProgress, CancellationToken.None);
+                Console.WriteLine($"Company: {exportCompany.Name}");
+                Console.WriteLine($"Workbook: {exportResult.OutputPath}");
+                Console.WriteLine($"Vouchers: {exportResult.Extraction.TotalVoucherCount}; matched transactions: {exportResult.Extraction.TotalMatchedTransactionCount}; reconciliation: {exportResult.Extraction.Reconciliation.Status}");
+                foreach (var batch in exportResult.Extraction.Batches) Console.WriteLine($"Batch: {batch.DateRange.From:yyyy-MM-dd} to {batch.DateRange.To:yyyy-MM-dd}; returned: {batch.VouchersReceived}; unique: {batch.UniqueVouchers}; matched: {batch.MatchedTransactions}");
+                foreach (var ledgerResult in exportResult.Extraction.Ledgers) Console.WriteLine($"Ledger: {ledgerResult.Ledger.Name}; transactions: {ledgerResult.TransactionCount}; debit: {ledgerResult.DebitTotal:0.00}; credit: {ledgerResult.CreditTotal:0.00}");
+                return 0;
             case "companies":
                 foreach (var company in await new MockTallyCompanyProvider().GetCompaniesAsync(profile, CancellationToken.None)) Console.WriteLine(company.Name);
                 return 0;
@@ -74,7 +117,7 @@ internal static class Program
                 foreach (var diagnostic in result.Diagnostics) Console.WriteLine($"{diagnostic.Check}: {diagnostic.Message}");
                 return result.IsSuccessful ? 0 : 1;
             default:
-                Console.WriteLine("Tally Prime Connector CLI\nCommands: companies | connection-test | live-sample | protocol-diagnostics YYYY-MM-DD YYYY-MM-DD [ledger]");
+                Console.WriteLine("Tally Prime Connector CLI\nCommands: companies | connection-test | live-sample | protocol-diagnostics YYYY-MM-DD YYYY-MM-DD [ledger] | ledger-export YYYY-MM-DD YYYY-MM-DD output.xlsx [--batch-days N] ledger [ledger ...]");
                 return 0;
         }
     }

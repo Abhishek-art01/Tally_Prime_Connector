@@ -1,32 +1,163 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using Microsoft.Win32;
 using TallyPrimeConnector.Contracts;
 using TallyPrimeConnector.Core;
+
 namespace TallyPrimeConnector.App;
-public sealed class MainViewModel(IConnectionService connectionService, ICompanyService companyService, IGroupService groupService, ILedgerService ledgerService, IExtractionService extractionService) : INotifyPropertyChanged
+
+public sealed class LedgerSelectionItem(LedgerInfo ledger) : INotifyPropertyChanged
 {
- private readonly CancellationTokenSource _lifetimeCancellation = new(); private CancellationTokenSource? _extractionCancellation;
- private string _selectedPage = "Dashboard", _host = "localhost", _port = "9000", _connectionResult = "No connection test has been run.", _ledgerSearch = "", _fromDate = DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd"), _toDate = DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd"), _extractionStatus = "Select a company, optional group/ledger scope, and valid date range.";
- private CompanyInfo? _selectedCompany; private GroupInfo? _selectedGroup; private LedgerInfo? _selectedLedger;
- public event PropertyChangedEventHandler? PropertyChanged;
- public IReadOnlyList<string> NavigationItems { get; } = ["Dashboard", "Connection", "Companies", "Groups", "Ledgers", "Transactions", "Extraction", "Processing", "Exports", "History", "Settings"];
- public ObservableCollection<CompanyInfo> Companies { get; } = []; public ObservableCollection<GroupInfo> Groups { get; } = []; public ObservableCollection<LedgerInfo> Ledgers { get; } = []; public ObservableCollection<VoucherInfo> Vouchers { get; } = [];
- public string SelectedPage { get => _selectedPage; set { _selectedPage = value; OnChanged(); OnChanged(nameof(PageDescription)); } }
- public string PageDescription => SelectedPage == "Dashboard" ? "Read-only Tally discovery: connection, company, group, ledger, date range, and voucher sample." : "Configure and manage " + SelectedPage.ToLowerInvariant() + ".";
- public string Host { get => _host; set { _host = value; OnChanged(); } } public string Port { get => _port; set { _port = value; OnChanged(); } } public string ConnectionResult { get => _connectionResult; set { _connectionResult = value; OnChanged(); } }
- public string LedgerSearch { get => _ledgerSearch; set { _ledgerSearch = value; OnChanged(); OnChanged(nameof(FilteredLedgers)); } } public IEnumerable<LedgerInfo> FilteredLedgers => Ledgers.Where(x => string.IsNullOrWhiteSpace(LedgerSearch) || x.Name.Contains(LedgerSearch, StringComparison.OrdinalIgnoreCase));
- public string FromDate { get => _fromDate; set { _fromDate = value; OnChanged(); } } public string ToDate { get => _toDate; set { _toDate = value; OnChanged(); } } public string ExtractionStatus { get => _extractionStatus; set { _extractionStatus = value; OnChanged(); } }
- public CompanyInfo? SelectedCompany { get => _selectedCompany; set { _selectedCompany = value; OnChanged(); } } public GroupInfo? SelectedGroup { get => _selectedGroup; set { _selectedGroup = value; OnChanged(); } } public LedgerInfo? SelectedLedger { get => _selectedLedger; set { _selectedLedger = value; OnChanged(); } }
- public ICommand TestConnectionCommand => new AsyncCommand(TestConnectionAsync); public ICommand LoadCompaniesCommand => new AsyncCommand(LoadCompaniesAsync); public ICommand LoadGroupsCommand => new AsyncCommand(LoadGroupsAsync); public ICommand LoadLedgersCommand => new AsyncCommand(LoadLedgersAsync); public ICommand ExtractCommand => new AsyncCommand(ExtractAsync); public ICommand CancelExtractionCommand => new RelayCommand(() => _extractionCancellation?.Cancel());
- private ConnectionProfile Profile() => int.TryParse(Port, out var port) ? new("Default", Host, port, TallyProtocol.HttpXml, TallyConnectionMethod.XmlHttp) : throw new ConfigurationException("Please enter a valid port between 1 and 65535.");
- private async Task TestConnectionAsync() { try { var result = await connectionService.TestAsync(Profile(), _lifetimeCancellation.Token); ConnectionResult = string.Join(Environment.NewLine, result.Diagnostics.Select(x => $"{(x.Passed ? "✓" : "•")} {x.Check}: {x.Message}")); } catch (ConfigurationException exception) { ConnectionResult = exception.Message; } catch { ConnectionResult = "Unable to connect to TallyPrime. Please verify that TallyPrime is running and the configured HTTP/XML port is correct."; } }
- private async Task LoadCompaniesAsync() { Companies.Clear(); foreach (var company in await companyService.GetCompaniesAsync(Profile(), _lifetimeCancellation.Token)) Companies.Add(company); SelectedCompany = Companies.FirstOrDefault(); ExtractionStatus = Companies.Count == 0 ? "No companies were returned." : "Companies loaded. Select a company, then load groups."; }
- private async Task LoadGroupsAsync() { if (SelectedCompany is null) { ExtractionStatus = "Select a company before loading groups."; return; } Groups.Clear(); foreach (var group in await groupService.GetGroupsAsync(SelectedCompany, _lifetimeCancellation.Token)) Groups.Add(group); SelectedGroup = Groups.FirstOrDefault(); ExtractionStatus = "Groups loaded."; }
- private async Task LoadLedgersAsync() { if (SelectedCompany is null) { ExtractionStatus = "Select a company before loading ledgers."; return; } Ledgers.Clear(); foreach (var ledger in await ledgerService.GetLedgersAsync(SelectedCompany, SelectedGroup?.Name, _lifetimeCancellation.Token)) Ledgers.Add(ledger); SelectedLedger = Ledgers.FirstOrDefault(); OnChanged(nameof(FilteredLedgers)); ExtractionStatus = "Ledgers loaded. Search filters the local session list without another Tally request."; }
- private async Task ExtractAsync() { if (SelectedCompany is null) { ExtractionStatus = "Select a company before extracting transactions."; return; } if (!DateOnly.TryParse(FromDate, out var from) || !DateOnly.TryParse(ToDate, out var to) || from > to) { ExtractionStatus = "From Date must be on or before To Date, using YYYY-MM-DD."; return; } _extractionCancellation?.Dispose(); _extractionCancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCancellation.Token); var progress = new Progress<ExtractionProgress>(x => ExtractionStatus = $"{x.Stage} — Records: {x.RecordsProcessed}/{x.RecordsFound}; Progress: {x.Percent}%"); try { var scope = new ExtractionScope(SelectedGroup?.Name, SelectedLedger is null ? null : [SelectedLedger.Name]); var result = await extractionService.ExtractAsync(new(new(SelectedCompany, Profile()), scope, DateRange.Create(from, to)), progress, _extractionCancellation.Token); Vouchers.Clear(); foreach (var voucher in result.Vouchers) Vouchers.Add(voucher); ExtractionStatus = $"Completed read-only extraction. {result.RecordsFound} voucher(s) found."; } catch (OperationCanceledException) { ExtractionStatus = "Extraction cancelled."; } catch (Exception exception) { ExtractionStatus = "Unable to extract vouchers: " + exception.Message; } }
- private void OnChanged([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
+    private bool _isSelected;
+    public LedgerInfo Ledger { get; } = ledger;
+    public bool IsSelected { get => _isSelected; set { if (_isSelected == value) return; _isSelected = value; PropertyChanged?.Invoke(this, new(nameof(IsSelected))); } }
+    public event PropertyChangedEventHandler? PropertyChanged;
 }
-public sealed class AsyncCommand(Func<Task> execute) : ICommand { private bool _busy; public event EventHandler? CanExecuteChanged; public bool CanExecute(object? p) => !_busy; public async void Execute(object? p) { _busy = true; CanExecuteChanged?.Invoke(this, EventArgs.Empty); try { await execute(); } finally { _busy = false; CanExecuteChanged?.Invoke(this, EventArgs.Empty); } } }
-public sealed class RelayCommand(Action execute) : ICommand { public event EventHandler? CanExecuteChanged { add { } remove { } } public bool CanExecute(object? parameter) => true; public void Execute(object? parameter) => execute(); }
+
+public sealed class MainViewModel(IConnectionService connectionService, ICompanyService companyService, IGroupService groupService, ILedgerService ledgerService, ILedgerWiseExportService exportService) : INotifyPropertyChanged
+{
+    private readonly CancellationTokenSource _lifetimeCancellation = new();
+    private CancellationTokenSource? _extractionCancellation;
+    private string _selectedPage = "Dashboard", _host = "localhost", _port = "9000", _connectionResult = "No connection test has been run.", _ledgerSearch = "", _fromDate = DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd"), _toDate = DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd"), _batchDays = LedgerWiseExtractionRequest.DefaultBatchDays.ToString(), _exportPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Tally Ledger Export.xlsx"), _lastExportPath = "", _extractionStatus = "Select a company, dates, one or more ledgers, and an output file.";
+    private CompanyInfo? _selectedCompany;
+    private GroupInfo? _selectedGroup;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    public IReadOnlyList<string> NavigationItems { get; } = ["Dashboard", "Connection", "Companies", "Groups", "Ledgers", "Transactions", "Extraction", "Processing", "Exports", "History", "Settings"];
+    public ObservableCollection<CompanyInfo> Companies { get; } = [];
+    public ObservableCollection<GroupInfo> Groups { get; } = [];
+    public ObservableCollection<LedgerInfo> Ledgers { get; } = [];
+    public ObservableCollection<LedgerSelectionItem> LedgerSelections { get; } = [];
+    public ObservableCollection<VoucherInfo> Vouchers { get; } = [];
+
+    public string SelectedPage { get => _selectedPage; set { _selectedPage = value; OnChanged(); OnChanged(nameof(PageDescription)); } }
+    public string PageDescription => SelectedPage == "Dashboard" ? "Read-only Tally extraction and ledger-wise Excel export." : "Configure and manage " + SelectedPage.ToLowerInvariant() + ".";
+    public string Host { get => _host; set { _host = value; OnChanged(); } }
+    public string Port { get => _port; set { _port = value; OnChanged(); } }
+    public string ConnectionResult { get => _connectionResult; set { _connectionResult = value; OnChanged(); } }
+    public string LedgerSearch { get => _ledgerSearch; set { _ledgerSearch = value; OnChanged(); OnChanged(nameof(FilteredLedgerSelections)); } }
+    public IEnumerable<LedgerSelectionItem> FilteredLedgerSelections => LedgerSelections.Where(x => string.IsNullOrWhiteSpace(LedgerSearch) || x.Ledger.Name.Contains(LedgerSearch, StringComparison.OrdinalIgnoreCase));
+    public string FromDate { get => _fromDate; set { _fromDate = value; OnChanged(); } }
+    public string ToDate { get => _toDate; set { _toDate = value; OnChanged(); } }
+    public string BatchDays { get => _batchDays; set { _batchDays = value; OnChanged(); } }
+    public string ExportPath { get => _exportPath; set { _exportPath = value; OnChanged(); } }
+    public string LastExportPath { get => _lastExportPath; private set { _lastExportPath = value; OnChanged(); } }
+    public string ExtractionStatus { get => _extractionStatus; set { _extractionStatus = value; OnChanged(); } }
+    public CompanyInfo? SelectedCompany { get => _selectedCompany; set { _selectedCompany = value; OnChanged(); } }
+    public GroupInfo? SelectedGroup { get => _selectedGroup; set { _selectedGroup = value; OnChanged(); } }
+
+    public ICommand TestConnectionCommand => new AsyncCommand(TestConnectionAsync);
+    public ICommand LoadCompaniesCommand => new AsyncCommand(LoadCompaniesAsync);
+    public ICommand LoadGroupsCommand => new AsyncCommand(LoadGroupsAsync);
+    public ICommand LoadLedgersCommand => new AsyncCommand(LoadLedgersAsync);
+    public ICommand ChooseExportPathCommand => new RelayCommand(ChooseExportPath);
+    public ICommand RevealExportCommand => new RelayCommand(RevealExport);
+    public ICommand ExtractCommand => new AsyncCommand(ExtractAndExportAsync);
+    public ICommand CancelExtractionCommand => new RelayCommand(() => _extractionCancellation?.Cancel());
+
+    private ConnectionProfile Profile() => int.TryParse(Port, out var port) && port is > 0 and <= 65535
+        ? new("Default", Host, port, TallyProtocol.HttpXml, TallyConnectionMethod.XmlHttp)
+        : throw new ConfigurationException("Please enter a valid port between 1 and 65535.");
+
+    private async Task TestConnectionAsync()
+    {
+        try
+        {
+            var result = await connectionService.TestAsync(Profile(), _lifetimeCancellation.Token);
+            ConnectionResult = string.Join(Environment.NewLine, result.Diagnostics.Select(x => $"{(x.Passed ? "✓" : "•")} {x.Check}: {x.Message}"));
+        }
+        catch (ConfigurationException exception) { ConnectionResult = exception.Message; }
+        catch { ConnectionResult = "TallyPrime is not responding on the configured HTTP/XML port."; }
+    }
+
+    private async Task LoadCompaniesAsync()
+    {
+        Companies.Clear();
+        foreach (var company in await companyService.GetCompaniesAsync(Profile(), _lifetimeCancellation.Token)) Companies.Add(company);
+        SelectedCompany = Companies.FirstOrDefault();
+        ExtractionStatus = Companies.Count == 0 ? "No companies were returned." : "Companies loaded. Select a company, then load groups and ledgers.";
+    }
+
+    private async Task LoadGroupsAsync()
+    {
+        if (SelectedCompany is null) { ExtractionStatus = "Select a company before loading groups."; return; }
+        Groups.Clear();
+        foreach (var group in await groupService.GetGroupsAsync(SelectedCompany, _lifetimeCancellation.Token)) Groups.Add(group);
+        SelectedGroup = Groups.FirstOrDefault();
+        ExtractionStatus = "Groups loaded. Group selection is metadata; transaction filtering remains exact ledger membership after date validation.";
+    }
+
+    private async Task LoadLedgersAsync()
+    {
+        if (SelectedCompany is null) { ExtractionStatus = "Select a company before loading ledgers."; return; }
+        Ledgers.Clear(); LedgerSelections.Clear();
+        foreach (var ledger in await ledgerService.GetLedgersAsync(SelectedCompany, SelectedGroup?.Name, _lifetimeCancellation.Token))
+        {
+            Ledgers.Add(ledger);
+            LedgerSelections.Add(new LedgerSelectionItem(ledger));
+        }
+        OnChanged(nameof(FilteredLedgerSelections));
+        ExtractionStatus = "Ledgers loaded. Tick one or more exact ledger names for export.";
+    }
+
+    private void ChooseExportPath()
+    {
+        var dialog = new SaveFileDialog { Filter = "Excel Workbook (*.xlsx)|*.xlsx", DefaultExt = ".xlsx", AddExtension = true, FileName = Path.GetFileName(ExportPath) };
+        if (dialog.ShowDialog() == true) ExportPath = dialog.FileName;
+    }
+
+    private void RevealExport()
+    {
+        if (string.IsNullOrWhiteSpace(LastExportPath) || !File.Exists(LastExportPath)) { ExtractionStatus = "No generated workbook is available to reveal."; return; }
+        try { Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{LastExportPath}\"") { UseShellExecute = true }); }
+        catch { ExtractionStatus = "The workbook was created, but its folder could not be opened automatically."; }
+    }
+
+    private async Task ExtractAndExportAsync()
+    {
+        if (SelectedCompany is null) { ExtractionStatus = "The selected company is not available."; return; }
+        if (!DateOnly.TryParse(FromDate, out var from) || !DateOnly.TryParse(ToDate, out var to) || from > to) { ExtractionStatus = "From Date must be on or before To Date, using YYYY-MM-DD."; return; }
+        if (!int.TryParse(BatchDays, out var batchDays) || batchDays < 1) { ExtractionStatus = "Batch size must be at least one day."; return; }
+        var selectedLedgers = LedgerSelections.Where(x => x.IsSelected).Select(x => x.Ledger).ToList();
+        if (selectedLedgers.Count == 0) { ExtractionStatus = "No selected ledgers were provided."; return; }
+
+        try
+        {
+            var request = LedgerWiseExtractionRequest.Create(new CompanyContext(SelectedCompany, Profile()), DateRange.Create(from, to), SelectedGroup?.Name, selectedLedgers, ExportPath, batchDays);
+            _extractionCancellation?.Dispose();
+            _extractionCancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCancellation.Token);
+            var progress = new Progress<ExtractionProgress>(x => ExtractionStatus = $"{x.Stage} — batch {x.CurrentBatch}/{x.TotalBatches}; range {x.CurrentDateRange?.From:yyyy-MM-dd} to {x.CurrentDateRange?.To:yyyy-MM-dd}; vouchers {x.RecordsFound}; matched {x.MatchedTransactions}; {x.Percent}%");
+            var result = await exportService.ExtractAndExportAsync(request, progress, _extractionCancellation.Token);
+            Vouchers.Clear();
+            foreach (var voucher in result.Extraction.Ledgers.SelectMany(x => x.Transactions).Select(x => x.Voucher).DistinctBy(x => x.Guid ?? x.MasterId ?? x.SourceId)) Vouchers.Add(voucher);
+            LastExportPath = result.OutputPath;
+            ExtractionStatus = $"Completed read-only export. {result.Extraction.TotalVoucherCount} vouchers, {result.Extraction.TotalMatchedTransactionCount} ledger transactions. Workbook: {result.OutputPath}";
+        }
+        catch (OperationCanceledException) { ExtractionStatus = "Extraction cancelled. No completion result was generated."; }
+        catch (TallyProtocolException exception) { ExtractionStatus = "Tally returned data outside the requested date scope. Extraction stopped: " + exception.Message; }
+        catch (ExtractionException exception) { ExtractionStatus = exception.Message; }
+        catch (ExportException exception) { ExtractionStatus = exception.Message; }
+        catch (Exception) { ExtractionStatus = "Unable to extract and export. See application logs for technical details."; }
+    }
+
+    private void OnChanged([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
+}
+
+public sealed class AsyncCommand(Func<Task> execute) : ICommand
+{
+    private bool _busy;
+    public event EventHandler? CanExecuteChanged;
+    public bool CanExecute(object? parameter) => !_busy;
+    public async void Execute(object? parameter) { _busy = true; CanExecuteChanged?.Invoke(this, EventArgs.Empty); try { await execute(); } finally { _busy = false; CanExecuteChanged?.Invoke(this, EventArgs.Empty); } }
+}
+
+public sealed class RelayCommand(Action execute) : ICommand
+{
+    public event EventHandler? CanExecuteChanged { add { } remove { } }
+    public bool CanExecute(object? parameter) => true;
+    public void Execute(object? parameter) => execute();
+}

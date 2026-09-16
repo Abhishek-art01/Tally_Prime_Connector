@@ -6,6 +6,8 @@ public interface IGroupService { Task<IReadOnlyList<GroupInfo>> GetGroupsAsync(C
 public interface ILedgerService { Task<IReadOnlyList<LedgerInfo>> GetLedgersAsync(CompanyInfo company, string? group, CancellationToken cancellationToken); }
 public interface IVoucherService { Task<IReadOnlyList<VoucherInfo>> GetVouchersAsync(CompanyInfo company, DateOnly from, DateOnly to, CancellationToken cancellationToken); }
 public interface IExtractionService { Task<ExtractionResult> ExtractAsync(ExtractionRequest request, IProgress<ExtractionProgress>? progress, CancellationToken cancellationToken); }
+public interface ILedgerWiseExtractionService { Task<LedgerWiseExtractionResult> ExtractAsync(LedgerWiseExtractionRequest request, IProgress<ExtractionProgress>? progress, CancellationToken cancellationToken); }
+public interface ILedgerWiseExportService { Task<LedgerWiseExportResult> ExtractAndExportAsync(LedgerWiseExtractionRequest request, IProgress<ExtractionProgress>? progress, CancellationToken cancellationToken); }
 public interface IExportService { }
 public interface IProcessingService { }
 public interface IConnectionService { Task<ConnectionTestResult> TestAsync(ConnectionProfile profile, CancellationToken cancellationToken); }
