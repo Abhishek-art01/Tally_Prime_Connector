@@ -8,7 +8,7 @@ Tally Prime Connector is a Windows desktop application for connecting to TallyPr
 Windows UI → Application Core → Tally Integration → TallyPrime
 ```
 
-Processing has two deliberate layers: the C# Core Processing Engine handles ordinary accounting workflows, while the Python Specialist Processing Engine is reserved for advanced analytical workloads. The product will bundle its specialist Python runtime; ordinary workflows never require a user-managed Python installation. See [processing architecture](docs/PROCESSING_ARCHITECTURE.md).
+Processing has two deliberate layers: the C# Core Processing Engine handles ordinary accounting workflows, while the Python Specialist Processing Engine is reserved for advanced analytical workloads. The product will bundle its specialist Python runtime; ordinary workflows never require a user-managed Python installation. The detailed status is maintained under `docs/projectstatus/`.
 
 The Next.js website is limited to landing, download, documentation, and support. It does not communicate with TallyPrime.
 
