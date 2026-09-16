@@ -97,8 +97,8 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
             foreach (var group in await groupService.GetGroupsAsync(SelectedCompany!, _lifetimeCancellation.Token)) Groups.Add(group);
             SelectedGroup = Groups.FirstOrDefault();
             ExtractionStatus = Groups.Count == 0
-                ? "No groups were returned. You can still load the available ledgers."
-                : $"{Groups.Count} groups loaded. Group selection is metadata when ledger group fields are unavailable; transaction matching remains exact ledger membership.";
+                ? "No groups were returned, so ledgers cannot be scoped to a selected group."
+                : $"{Groups.Count} groups loaded. Choose a group, then load only its ledgers.";
         }
         catch (Exception exception) { ExtractionStatus = "Unable to load groups from TallyPrime: " + exception.Message; }
     }
@@ -106,20 +106,35 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     private async Task LoadLedgersAsync()
     {
         if (!await EnsureCompanyAsync()) return;
+        if (SelectedGroup is null)
+        {
+            if (Groups.Count == 0)
+            {
+                await LoadGroupsAsync();
+            }
+
+            if (SelectedGroup is null)
+            {
+                ExtractionStatus = "Select a group before loading ledgers. The ledger list is scoped to the selected group only.";
+                return;
+            }
+        }
+
+        var selectedGroup = SelectedGroup!;
 
         try
         {
             Ledgers.Clear();
             LedgerSelections.Clear();
-            foreach (var ledger in await ledgerService.GetLedgersAsync(SelectedCompany!, SelectedGroup?.Name, _lifetimeCancellation.Token))
+            foreach (var ledger in await ledgerService.GetLedgersAsync(SelectedCompany!, selectedGroup.Name, _lifetimeCancellation.Token))
             {
                 Ledgers.Add(ledger);
                 LedgerSelections.Add(new LedgerSelectionItem(ledger));
             }
             OnChanged(nameof(FilteredLedgerSelections));
             ExtractionStatus = LedgerSelections.Count == 0
-                ? "No ledgers were returned for the selected company. Confirm the company and its masters in TallyPrime."
-                : $"{LedgerSelections.Count} ledgers loaded. Tick one or more exact ledger names for export.";
+                ? $"No ledgers belong to the selected group '{selectedGroup.Name}'."
+                : $"{LedgerSelections.Count} ledgers loaded from '{selectedGroup.Name}'. Tick one or more exact ledger names for export.";
         }
         catch (Exception exception) { ExtractionStatus = "Unable to load ledgers from TallyPrime: " + exception.Message; }
     }

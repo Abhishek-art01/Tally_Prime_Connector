@@ -12,6 +12,15 @@ public static class TallyXmlRequestFactory
         return $"<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>EXPORT</TALLYREQUEST><TYPE>COLLECTION</TYPE><ID>List of Ledgers</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT>{companyVariables}</STATICVARIABLES></DESC></BODY></ENVELOPE>";
     }
 
+    /// <summary>
+    /// Defines an ephemeral, read-only Ledger collection that includes the parent group.
+    /// Tally's built-in List of Ledgers export does not consistently include Parent in this release.
+    /// </summary>
+    public static string CreateLedgerMasterCollectionRequest(CompanyInfo company)
+    {
+        return $"<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>EXPORT</TALLYREQUEST><TYPE>COLLECTION</TYPE><ID>TPC Read Only Ledger Masters</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT><SVCURRENTCOMPANY TYPE=\"String\">{SecurityElement.Escape(company.Name)}</SVCURRENTCOMPANY></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME=\"TPC Read Only Ledger Masters\" ISMODIFY=\"No\" ISFIXED=\"No\" ISINITIALIZE=\"Yes\" ISOPTION=\"No\" ISINTERNAL=\"No\"><TYPE>Ledger</TYPE><FETCH>Name</FETCH><FETCH>Parent</FETCH><FETCH>MasterID</FETCH><FETCH>GUID</FETCH><FETCH>OpeningBalance</FETCH><FETCH>ClosingBalance</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>";
+    }
+
     public static string CreateGroupListRequest(CompanyInfo? company = null)
     {
         var companyVariables = company is null ? string.Empty : $"<SVCURRENTCOMPANY>{SecurityElement.Escape(company.Name)}</SVCURRENTCOMPANY>";

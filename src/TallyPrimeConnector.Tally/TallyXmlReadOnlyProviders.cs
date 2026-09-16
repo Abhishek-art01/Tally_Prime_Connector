@@ -13,19 +13,11 @@ public sealed class TallyXmlCollectionProvider(ITallyXmlClient client, TallyXmlR
 
     public async Task<IReadOnlyList<LedgerInfo>> GetLedgersAsync(CompanyInfo company, string? groupName, CancellationToken cancellationToken)
     {
-        var ledgers = await client.SendAsync(TallyXmlRequestFactory.CreateLedgerListRequest(company), profile, cancellationToken);
+        var ledgers = await client.SendAsync(TallyXmlRequestFactory.CreateLedgerMasterCollectionRequest(company), profile, cancellationToken);
         var result = parser.ParseLedgers(ledgers);
-
-        // The installed Tally collection can return ledgers without PARENT/group fields.
-        // In that response shape, applying a group filter would incorrectly hide every ledger.
-        // Group selection remains workflow metadata unless the returned ledger masters provide
-        // enough identity data to perform an exact, client-side group comparison.
-        if (string.IsNullOrWhiteSpace(groupName) || result.All(x => string.IsNullOrWhiteSpace(x.GroupName)))
-        {
-            return result;
-        }
-
-        return result.Where(x => string.Equals(x.GroupName, groupName, StringComparison.OrdinalIgnoreCase)).ToList();
+        return string.IsNullOrWhiteSpace(groupName)
+            ? result
+            : result.Where(x => string.Equals(x.GroupName, groupName, StringComparison.OrdinalIgnoreCase)).ToList();
     }
 }
 
