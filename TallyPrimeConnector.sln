@@ -1,0 +1,46 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TallyPrimeConnector.App", "apps\TallyPrimeConnector.App\TallyPrimeConnector.App.csproj", "{A1B2C3D4-0001-4000-8000-000000000001}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TallyPrimeConnector.Contracts", "src\TallyPrimeConnector.Contracts\TallyPrimeConnector.Contracts.csproj", "{A1B2C3D4-0002-4000-8000-000000000002}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TallyPrimeConnector.Core", "src\TallyPrimeConnector.Core\TallyPrimeConnector.Core.csproj", "{A1B2C3D4-0003-4000-8000-000000000003}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TallyPrimeConnector.Tally", "src\TallyPrimeConnector.Tally\TallyPrimeConnector.Tally.csproj", "{A1B2C3D4-0004-4000-8000-000000000004}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TallyPrimeConnector.Data", "src\TallyPrimeConnector.Data\TallyPrimeConnector.Data.csproj", "{A1B2C3D4-0005-4000-8000-000000000005}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TallyPrimeConnector.Processing", "src\TallyPrimeConnector.Processing\TallyPrimeConnector.Processing.csproj", "{A1B2C3D4-0006-4000-8000-000000000006}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TallyPrimeConnector.Excel", "src\TallyPrimeConnector.Excel\TallyPrimeConnector.Excel.csproj", "{A1B2C3D4-0007-4000-8000-000000000007}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TallyPrimeConnector.Infrastructure", "src\TallyPrimeConnector.Infrastructure\TallyPrimeConnector.Infrastructure.csproj", "{A1B2C3D4-0008-4000-8000-000000000008}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core.Tests", "tests\Core.Tests\Core.Tests.csproj", "{A1B2C3D4-0009-4000-8000-000000000009}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tally.Tests", "tests\Tally.Tests\Tally.Tests.csproj", "{A1B2C3D4-0010-4000-8000-000000000010}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Data.Tests", "tests\Data.Tests\Data.Tests.csproj", "{A1B2C3D4-0011-4000-8000-000000000011}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Processing.Tests", "tests\Processing.Tests\Processing.Tests.csproj", "{A1B2C3D4-0012-4000-8000-000000000012}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Excel.Tests", "tests\Excel.Tests\Excel.Tests.csproj", "{A1B2C3D4-0013-4000-8000-000000000013}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TallyPrimeConnector.Cli", "apps\TallyPrimeConnector.Cli\TallyPrimeConnector.Cli.csproj", "{A1B2C3D4-0014-4000-8000-000000000014}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TallyPrimeConnector.Tally.Mcp", "src\TallyPrimeConnector.Tally.Mcp\TallyPrimeConnector.Tally.Mcp.csproj", "{A1B2C3D4-0015-4000-8000-000000000015}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A1B2C3D4-0001-4000-8000-000000000001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-0001-4000-8000-000000000001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-0001-4000-8000-000000000001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-0001-4000-8000-000000000001}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

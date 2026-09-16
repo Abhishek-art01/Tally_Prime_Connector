@@ -1,0 +1,8 @@
+[project]
+name = "tally-prime-connector-specialist"
+version = "0.1.0"
+description = "Bundled specialist processing engine protocol for Tally Prime Connector"
+requires-python = ">=3.12"
+
+[project.optional-dependencies]
+specialist = ["pandas>=2.2", "numpy>=2.0"]

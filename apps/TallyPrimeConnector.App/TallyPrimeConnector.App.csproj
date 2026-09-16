@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/TallyPrimeConnector.Core/TallyPrimeConnector.Core.csproj" /><ProjectReference Include="../../src/TallyPrimeConnector.Contracts/TallyPrimeConnector.Contracts.csproj" /><ProjectReference Include="../../src/TallyPrimeConnector.Tally/TallyPrimeConnector.Tally.csproj" /><ProjectReference Include="../../src/TallyPrimeConnector.Data/TallyPrimeConnector.Data.csproj" /><ProjectReference Include="../../src/TallyPrimeConnector.Processing/TallyPrimeConnector.Processing.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" /><PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" /><PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" /><PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" /><PackageReference Include="Serilog.Settings.Configuration" Version="9.0.0" /><PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+  </ItemGroup>
+  <ItemGroup><None Update="appsettings.json"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None></ItemGroup>
+</Project>
