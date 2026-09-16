@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Windows;
 using System.Windows.Input;
 using Microsoft.Win32;
 using TallyPrimeConnector.Contracts;
@@ -23,11 +24,12 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private CancellationTokenSource? _extractionCancellation;
     private string _selectedPage = "Dashboard", _host = "localhost", _port = "9000", _connectionResult = "No connection test has been run.", _ledgerSearch = "", _fromDate = DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd"), _toDate = DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd"), _batchDays = LedgerWiseExtractionRequest.DefaultBatchDays.ToString(), _exportPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Tally Ledger Export.xlsx"), _lastExportPath = "", _extractionStatus = "Select a company, dates, one or more ledgers, and an output file.";
+    private bool _isSidebarCollapsed;
     private CompanyInfo? _selectedCompany;
     private GroupInfo? _selectedGroup;
 
     public event PropertyChangedEventHandler? PropertyChanged;
-    public IReadOnlyList<string> NavigationItems { get; } = ["Dashboard", "Connection", "Companies", "Groups", "Ledgers", "Transactions", "Extraction", "Processing", "Exports", "History", "Settings"];
+    public IReadOnlyList<string> NavigationItems { get; } = ["Dashboard", "Connection", "Ledgers", "Export"];
     public ObservableCollection<CompanyInfo> Companies { get; } = [];
     public ObservableCollection<GroupInfo> Groups { get; } = [];
     public ObservableCollection<LedgerInfo> Ledgers { get; } = [];
@@ -49,6 +51,7 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     public string ExtractionStatus { get => _extractionStatus; set { _extractionStatus = value; OnChanged(); } }
     public CompanyInfo? SelectedCompany { get => _selectedCompany; set { _selectedCompany = value; OnChanged(); } }
     public GroupInfo? SelectedGroup { get => _selectedGroup; set { _selectedGroup = value; OnChanged(); } }
+    public GridLength SidebarWidth => new(_isSidebarCollapsed ? 0 : 208);
 
     public ICommand TestConnectionCommand => new AsyncCommand(TestConnectionAsync);
     public ICommand LoadCompaniesCommand => new AsyncCommand(LoadCompaniesAsync);
@@ -58,6 +61,11 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     public ICommand RevealExportCommand => new RelayCommand(RevealExport);
     public ICommand ExtractCommand => new AsyncCommand(ExtractAndExportAsync);
     public ICommand CancelExtractionCommand => new RelayCommand(() => _extractionCancellation?.Cancel());
+    public ICommand ToggleSidebarCommand => new RelayCommand(() =>
+    {
+        _isSidebarCollapsed = !_isSidebarCollapsed;
+        OnChanged(nameof(SidebarWidth));
+    });
 
     private ConnectionProfile Profile() => int.TryParse(Port, out var port) && port is > 0 and <= 65535
         ? new("Default", Host, port, TallyProtocol.HttpXml, TallyConnectionMethod.XmlHttp)
