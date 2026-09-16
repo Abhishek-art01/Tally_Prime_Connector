@@ -76,32 +76,63 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
 
     private async Task LoadCompaniesAsync()
     {
-        Companies.Clear();
-        foreach (var company in await companyService.GetCompaniesAsync(Profile(), _lifetimeCancellation.Token)) Companies.Add(company);
-        SelectedCompany = Companies.FirstOrDefault();
-        ExtractionStatus = Companies.Count == 0 ? "No companies were returned." : "Companies loaded. Select a company, then load groups and ledgers.";
+        try
+        {
+            Companies.Clear();
+            foreach (var company in await companyService.GetCompaniesAsync(Profile(), _lifetimeCancellation.Token)) Companies.Add(company);
+            SelectedCompany = Companies.FirstOrDefault();
+            ExtractionStatus = Companies.Count == 0 ? "No companies were returned. Confirm that a company is loaded in TallyPrime." : $"{Companies.Count} company loaded. Select it, then load groups and ledgers.";
+        }
+        catch (ConfigurationException exception) { ExtractionStatus = exception.Message; }
+        catch (Exception exception) { ExtractionStatus = "Unable to load companies from TallyPrime: " + exception.Message; }
     }
 
     private async Task LoadGroupsAsync()
     {
-        if (SelectedCompany is null) { ExtractionStatus = "Select a company before loading groups."; return; }
-        Groups.Clear();
-        foreach (var group in await groupService.GetGroupsAsync(SelectedCompany, _lifetimeCancellation.Token)) Groups.Add(group);
-        SelectedGroup = Groups.FirstOrDefault();
-        ExtractionStatus = "Groups loaded. Group selection is metadata; transaction filtering remains exact ledger membership after date validation.";
+        if (!await EnsureCompanyAsync()) return;
+
+        try
+        {
+            Groups.Clear();
+            foreach (var group in await groupService.GetGroupsAsync(SelectedCompany!, _lifetimeCancellation.Token)) Groups.Add(group);
+            SelectedGroup = Groups.FirstOrDefault();
+            ExtractionStatus = Groups.Count == 0
+                ? "No groups were returned. You can still load the available ledgers."
+                : $"{Groups.Count} groups loaded. Group selection is metadata when ledger group fields are unavailable; transaction matching remains exact ledger membership.";
+        }
+        catch (Exception exception) { ExtractionStatus = "Unable to load groups from TallyPrime: " + exception.Message; }
     }
 
     private async Task LoadLedgersAsync()
     {
-        if (SelectedCompany is null) { ExtractionStatus = "Select a company before loading ledgers."; return; }
-        Ledgers.Clear(); LedgerSelections.Clear();
-        foreach (var ledger in await ledgerService.GetLedgersAsync(SelectedCompany, SelectedGroup?.Name, _lifetimeCancellation.Token))
+        if (!await EnsureCompanyAsync()) return;
+
+        try
         {
-            Ledgers.Add(ledger);
-            LedgerSelections.Add(new LedgerSelectionItem(ledger));
+            Ledgers.Clear();
+            LedgerSelections.Clear();
+            foreach (var ledger in await ledgerService.GetLedgersAsync(SelectedCompany!, SelectedGroup?.Name, _lifetimeCancellation.Token))
+            {
+                Ledgers.Add(ledger);
+                LedgerSelections.Add(new LedgerSelectionItem(ledger));
+            }
+            OnChanged(nameof(FilteredLedgerSelections));
+            ExtractionStatus = LedgerSelections.Count == 0
+                ? "No ledgers were returned for the selected company. Confirm the company and its masters in TallyPrime."
+                : $"{LedgerSelections.Count} ledgers loaded. Tick one or more exact ledger names for export.";
         }
-        OnChanged(nameof(FilteredLedgerSelections));
-        ExtractionStatus = "Ledgers loaded. Tick one or more exact ledger names for export.";
+        catch (Exception exception) { ExtractionStatus = "Unable to load ledgers from TallyPrime: " + exception.Message; }
+    }
+
+    private async Task<bool> EnsureCompanyAsync()
+    {
+        if (SelectedCompany is not null) return true;
+
+        await LoadCompaniesAsync();
+        if (SelectedCompany is not null) return true;
+
+        ExtractionStatus = "No company is selected. Load a company in TallyPrime, then click Load Companies or Load Ledgers.";
+        return false;
     }
 
     private void ChooseExportPath()
