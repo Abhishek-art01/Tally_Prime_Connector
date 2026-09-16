@@ -8,4 +8,5 @@ public sealed class XmlParsingTests
     [Fact] public void Parses_ledger_decimal_balances() { var result = new TallyXmlResponseParser().ParseLedgers(Xml); Assert.Equal(1250.50m, result[0].OpeningBalance); Assert.Equal("Sundry Debtors", result[0].GroupName); }
     [Fact] public void Parses_voucher_date_and_direction() { var result = new TallyXmlResponseParser().ParseVouchers(Xml); Assert.Equal(new DateOnly(2026, 4, 1), result[0].Date); Assert.Equal(DebitCredit.Debit, result[0].Entries[0].Amount.Direction); }
     [Fact] public void Rejects_malformed_xml() => Assert.Throws<TallyProtocolException>(() => new TallyXmlResponseParser().ParseGroups("<not-xml"));
+    [Fact] public void Ignores_summary_ledger_count_nodes() { var result = new TallyXmlResponseParser().ParseLedgers("<ENVELOPE><HEADER><STATUS>1</STATUS></HEADER><BODY><DESC><CMPINFO><LEDGER>0</LEDGER></CMPINFO></DESC><DATA><COLLECTION /></DATA></BODY></ENVELOPE>"); Assert.Empty(result); }
 }
