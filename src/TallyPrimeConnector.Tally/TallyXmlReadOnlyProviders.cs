@@ -5,8 +5,11 @@ namespace TallyPrimeConnector.Tally;
 /// <summary>Real XML/HTTP provider for request formats verified in official TallyHelp documentation.</summary>
 public sealed class TallyXmlCollectionProvider(ITallyXmlClient client, TallyXmlResponseParser parser, ConnectionProfile profile) : ITallyCollectionProvider
 {
-    public Task<IReadOnlyList<GroupInfo>> GetGroupsAsync(CompanyInfo company, CancellationToken cancellationToken) =>
-        throw new TallyProtocolException("TODO: VERIFY WITH TALLYPRIME — a read-only group collection request format has not been verified for this connector.");
+    public async Task<IReadOnlyList<GroupInfo>> GetGroupsAsync(CompanyInfo company, CancellationToken cancellationToken)
+    {
+        var response = await client.SendAsync(TallyXmlRequestFactory.CreateGroupListRequest(company), profile, cancellationToken);
+        return parser.ParseGroups(response);
+    }
 
     public async Task<IReadOnlyList<LedgerInfo>> GetLedgersAsync(CompanyInfo company, string? groupName, CancellationToken cancellationToken)
     {
@@ -16,14 +19,28 @@ public sealed class TallyXmlCollectionProvider(ITallyXmlClient client, TallyXmlR
     }
 }
 
-public sealed class TallyXmlCompanyProvider : ITallyCompanyProvider
+public sealed class TallyXmlCompanyProvider(ITallyXmlClient client, TallyXmlResponseParser parser) : ITallyCompanyProvider
 {
-    public Task<IReadOnlyList<CompanyInfo>> GetCompaniesAsync(ConnectionProfile profile, CancellationToken cancellationToken) =>
-        throw new TallyProtocolException("TODO: VERIFY WITH TALLYPRIME — company discovery request format has not been verified. Tally must not be queried with a fabricated request.");
+    public async Task<IReadOnlyList<CompanyInfo>> GetCompaniesAsync(ConnectionProfile profile, CancellationToken cancellationToken)
+    {
+        var response = await client.SendAsync(TallyXmlRequestFactory.CreateGroupListRequest(), profile, cancellationToken);
+        var name = parser.ParseCurrentCompanyName(response);
+        return string.IsNullOrWhiteSpace(name) ? [] : [new CompanyInfo(name, name)];
+    }
 }
 
-public sealed class TallyXmlVoucherProvider : ITallyVoucherProvider
+public sealed class TallyXmlVoucherProvider(ITallyXmlClient client, TallyXmlResponseParser parser, ConnectionProfile profile) : ITallyVoucherProvider
 {
-    public Task<IReadOnlyList<VoucherInfo>> GetVouchersAsync(CompanyInfo company, DateOnly from, DateOnly to, CancellationToken cancellationToken) =>
-        throw new TallyProtocolException("TODO: VERIFY WITH TALLYPRIME — voucher collection/report and date filter request format have not been verified.");
+    public async Task<IReadOnlyList<VoucherInfo>> GetVouchersAsync(CompanyInfo company, DateOnly from, DateOnly to, CancellationToken cancellationToken)
+    {
+        if (from > to) throw new ArgumentException("From Date must be on or before To Date.");
+        var response = await client.SendAsync(TallyXmlRequestFactory.CreateVoucherCollectionRequest(company, from, to), profile, cancellationToken);
+        var vouchers = parser.ParseVouchers(response);
+        // Never silently accept a collection response whose server-side date scope is wrong.
+        // Client-side ledger selection is permitted only after this validation succeeds.
+        var outOfRange = vouchers.FirstOrDefault(v => v.Date < from || v.Date > to);
+        if (outOfRange is not null)
+            throw new TallyProtocolException($"TallyPrime Voucher collection response was not date-scoped. Requested {from:yyyy-MM-dd} to {to:yyyy-MM-dd}, but voucher {outOfRange.VoucherNumber ?? outOfRange.SourceId} has date {outOfRange.Date:yyyy-MM-dd}.");
+        return vouchers;
+    }
 }

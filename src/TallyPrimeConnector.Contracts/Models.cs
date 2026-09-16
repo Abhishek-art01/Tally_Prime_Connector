@@ -7,7 +7,7 @@ public sealed record LedgerInfo(string SourceId, string Name, string? GroupName 
 public sealed record PartyInfo(string? Name, string? TaxRegistrationNumber = null, string? Address = null);
 public sealed record TransactionAmount(decimal Value, DebitCredit Direction, string? Currency = null);
 public enum DebitCredit { Debit, Credit }
-public sealed record VoucherEntryInfo(string SourceId, string LedgerName, TransactionAmount Amount, string? Reference = null);
+public sealed record VoucherEntryInfo(string SourceId, string LedgerName, TransactionAmount Amount, string? Reference = null, decimal? SourceAmount = null);
 public sealed record InventoryEntryInfo(string? StockItemName, decimal? Quantity, decimal? Rate, decimal? Amount);
 public sealed record TaxEntryInfo(string? TaxType, decimal Amount, decimal? Rate = null);
 public sealed record VoucherInfo(string SourceId, string? VoucherNumber, DateOnly Date, string VoucherType, string? Narration, IReadOnlyList<VoucherEntryInfo> Entries, PartyInfo? Party = null, IReadOnlyList<InventoryEntryInfo>? InventoryEntries = null, IReadOnlyList<TaxEntryInfo>? TaxEntries = null, string? ReferenceNumber = null, string? PartyLedgerName = null);
