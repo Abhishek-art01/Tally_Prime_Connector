@@ -375,7 +375,7 @@
                                 <Button Style="{StaticResource SecondaryButton}" Content="Cancel" Command="{Binding CancelExtractionCommand}" />
                             </StackPanel>
                         </Grid>
-                        <Expander Header="{Binding PreviewHeader}" IsExpanded="{Binding IsPreviewExpanded}" Margin="0,4,0,0">
+                        <Expander Header="{Binding PreviewHeader}" IsExpanded="{Binding IsPreviewExpanded, Mode=OneWay}" Margin="0,4,0,0">
                             <DataGrid ItemsSource="{Binding PreviewRows}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" Height="200" Margin="0,8,0,0" BorderBrush="{StaticResource Border}" GridLinesVisibility="Horizontal">
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="Group"   Binding="{Binding Group}"   Width="140" />
