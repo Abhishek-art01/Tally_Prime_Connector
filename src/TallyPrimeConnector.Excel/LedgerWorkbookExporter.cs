@@ -6,7 +6,7 @@ namespace TallyPrimeConnector.Excel;
 /// <summary>Writes a deterministic, ledger-per-worksheet workbook from normalized C# extraction data.</summary>
 public sealed class LedgerWorkbookExporter : ILedgerWorkbookExporter
 {
-    private static readonly string[] Headers = ["Date", "Voucher Type", "Voucher Number", "Ledger", "Party Ledger", "Reference", "Narration", "Debit", "Credit", "Amount", "Source Amount", "GUID", "MasterID"];
+    private static readonly string[] Headers = ["Group", "Date", "Voucher Type", "Voucher Number", "Ledger", "Party Ledger", "Reference", "Narration", "Debit", "Credit", "Amount", "Source Amount", "GUID", "MasterID"];
 
     public async Task<string> ExportAsync(LedgerWiseExtractionResult extraction, CancellationToken cancellationToken)
     {
@@ -80,19 +80,20 @@ public sealed class LedgerWorkbookExporter : ILedgerWorkbookExporter
             cancellationToken.ThrowIfCancellationRequested();
             var voucher = transaction.Voucher;
             var entry = transaction.Entry;
-            worksheet.Cell(row, 1).Value = voucher.Date.ToDateTime(TimeOnly.MinValue);
-            worksheet.Cell(row, 2).Value = voucher.VoucherType;
-            worksheet.Cell(row, 3).Value = voucher.VoucherNumber;
-            worksheet.Cell(row, 4).Value = ledger.Ledger.Name;
-            worksheet.Cell(row, 5).Value = voucher.PartyLedgerName ?? voucher.Party?.Name;
-            worksheet.Cell(row, 6).Value = entry.Reference ?? voucher.ReferenceNumber;
-            worksheet.Cell(row, 7).Value = voucher.Narration;
-            worksheet.Cell(row, 8).Value = entry.Amount.Direction == DebitCredit.Debit ? entry.Amount.Value : 0m;
-            worksheet.Cell(row, 9).Value = entry.Amount.Direction == DebitCredit.Credit ? entry.Amount.Value : 0m;
-            worksheet.Cell(row, 10).Value = entry.Amount.Value;
-            worksheet.Cell(row, 11).Value = entry.SourceAmount;
-            worksheet.Cell(row, 12).Value = voucher.Guid;
-            worksheet.Cell(row, 13).Value = voucher.MasterId ?? voucher.SourceId;
+            worksheet.Cell(row, 1).Value = ledger.Ledger.GroupName ?? "-";
+            worksheet.Cell(row, 2).Value = voucher.Date.ToDateTime(TimeOnly.MinValue);
+            worksheet.Cell(row, 3).Value = voucher.VoucherType;
+            worksheet.Cell(row, 4).Value = voucher.VoucherNumber;
+            worksheet.Cell(row, 5).Value = ledger.Ledger.Name;
+            worksheet.Cell(row, 6).Value = voucher.PartyLedgerName ?? voucher.Party?.Name;
+            worksheet.Cell(row, 7).Value = entry.Reference ?? voucher.ReferenceNumber;
+            worksheet.Cell(row, 8).Value = voucher.Narration;
+            worksheet.Cell(row, 9).Value = entry.Amount.Direction == DebitCredit.Debit ? entry.Amount.Value : 0m;
+            worksheet.Cell(row, 10).Value = entry.Amount.Direction == DebitCredit.Credit ? entry.Amount.Value : 0m;
+            worksheet.Cell(row, 11).Value = entry.Amount.Value;
+            worksheet.Cell(row, 12).Value = entry.SourceAmount;
+            worksheet.Cell(row, 13).Value = voucher.Guid;
+            worksheet.Cell(row, 14).Value = voucher.MasterId ?? voucher.SourceId;
             row++;
         }
 
@@ -104,18 +105,19 @@ public sealed class LedgerWorkbookExporter : ILedgerWorkbookExporter
         }
 
         worksheet.Range(1, 1, Math.Max(1, row - 1), Headers.Length).SetAutoFilter();
-        worksheet.Column(1).Style.NumberFormat.Format = "yyyy-mm-dd";
-        worksheet.Range(2, 8, Math.Max(2, row - 1), 11).Style.NumberFormat.Format = "#,##0.00;[Red]-#,##0.00";
-        worksheet.Column(1).Width = 12;
-        worksheet.Column(2).Width = 18;
-        worksheet.Column(3).Width = 19;
-        worksheet.Column(4).Width = 28;
-        worksheet.Column(5).Width = 28;
-        worksheet.Column(6).Width = 20;
-        worksheet.Column(7).Width = 42;
-        worksheet.Columns(8, 11).Width = 14;
-        worksheet.Column(12).Width = 38;
-        worksheet.Column(13).Width = 16;
+        worksheet.Column(2).Style.NumberFormat.Format = "yyyy-mm-dd";
+        worksheet.Range(2, 9, Math.Max(2, row - 1), 12).Style.NumberFormat.Format = "#,##0.00;[Red]-#,##0.00";
+        worksheet.Column(1).Width = 26; // Group
+        worksheet.Column(2).Width = 12; // Date
+        worksheet.Column(3).Width = 18; // Voucher Type
+        worksheet.Column(4).Width = 19; // Voucher Number
+        worksheet.Column(5).Width = 28; // Ledger
+        worksheet.Column(6).Width = 28; // Party Ledger
+        worksheet.Column(7).Width = 20; // Reference
+        worksheet.Column(8).Width = 42; // Narration
+        worksheet.Columns(9, 12).Width = 14;
+        worksheet.Column(13).Width = 38;
+        worksheet.Column(14).Width = 16;
     }
 
     private static LedgerResult BuildLegacyLedgerResult(LedgerInfo ledger, IReadOnlyList<VoucherInfo> vouchers)

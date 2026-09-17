@@ -35,7 +35,9 @@ public sealed class GroupSelectionItem(GroupInfo group) : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
 }
 
-public sealed class MainViewModel(IConnectionService connectionService, ICompanyService companyService, IGroupService groupService, ILedgerService ledgerService, ILedgerWiseExportService exportService) : INotifyPropertyChanged
+public sealed record PreviewRow(string Group, string Ledger, DateOnly Date, string VoucherType, string VoucherNumber, string? Party, string? Narration, decimal Debit, decimal Credit);
+
+public sealed class MainViewModel(IConnectionService connectionService, ICompanyService companyService, IGroupService groupService, ILedgerService ledgerService, ILedgerWiseExtractionService extractionService, ILedgerWiseExportService exportService) : INotifyPropertyChanged
 {
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private CancellationTokenSource? _extractionCancellation;
@@ -50,7 +52,7 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     public ObservableCollection<GroupSelectionItem> GroupSelections { get; } = [];
     public ObservableCollection<LedgerInfo> Ledgers { get; } = [];
     public ObservableCollection<LedgerSelectionItem> LedgerSelections { get; } = [];
-    public ObservableCollection<VoucherInfo> Vouchers { get; } = [];
+    public ObservableCollection<PreviewRow> PreviewRows { get; } = [];
 
     public string SelectedPage { get => _selectedPage; set { _selectedPage = value; OnChanged(); OnChanged(nameof(PageDescription)); } }
     public string PageDescription => SelectedPage == "Dashboard" ? "Read-only Tally extraction and ledger-wise Excel export." : "Configure and manage " + SelectedPage.ToLowerInvariant() + ".";
@@ -71,6 +73,7 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     public string LedgerSearch { get => _ledgerSearch; set { _ledgerSearch = value; OnChanged(); OnChanged(nameof(FilteredLedgerSelections)); } }
     public string PlaceholderLedgerText { get => _placeholderLedgerText; set { _placeholderLedgerText = value; OnChanged(); } }
     public string SelectAllText => LedgerSelections.Count > 0 && LedgerSelections.All(x => x.IsSelected) ? "Clear all" : "Select all";
+    public int SelectedLedgerCount => LedgerSelections.Count(x => x.IsSelected);
     public IEnumerable<LedgerSelectionItem> FilteredLedgerSelections => LedgerSelections.Where(x => string.IsNullOrWhiteSpace(LedgerSearch) || x.Ledger.Name.Contains(LedgerSearch, StringComparison.OrdinalIgnoreCase));
 
     private bool _updatingCompanySelection;
@@ -89,12 +92,21 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
         PlaceholderCompanyText = sel != null ? sel.Name : (CompanySelections.Count > 0 ? $"{CompanySelections.Count} companies loaded" : "Search companies...");
     }
     private void OnGroupSelectionItemPropertyChanged(object? sender, PropertyChangedEventArgs e) { if (e.PropertyName == nameof(GroupSelectionItem.IsSelected)) OnChanged(nameof(SelectAllGroupsText)); }
-    private void OnLedgerSelectionItemPropertyChanged(object? sender, PropertyChangedEventArgs e) { if (e.PropertyName == nameof(LedgerSelectionItem.IsSelected)) OnChanged(nameof(SelectAllText)); }
+    private void OnLedgerSelectionItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(LedgerSelectionItem.IsSelected))
+        {
+            OnChanged(nameof(SelectAllText));
+            OnChanged(nameof(SelectedLedgerCount));
+        }
+    }
 
     public DateTime? FromDate { get => _fromDate; set { _fromDate = value; OnChanged(); } }
     public DateTime? ToDate { get => _toDate; set { _toDate = value; OnChanged(); } }
     public string BatchDays { get => _batchDays; set { _batchDays = value; OnChanged(); } }
     public string ExtractionStatus { get => _extractionStatus; set { _extractionStatus = value; OnChanged(); } }
+    public string PreviewHeader => PreviewRows.Count > 0 ? $"Preview ({PreviewRows.Count} rows)" : "Preview";
+    public bool IsPreviewExpanded => PreviewRows.Count > 0;
     public GridLength SidebarWidth => new(_isSidebarCollapsed ? 0 : 208);
 
     public ICommand TestConnectionCommand => new AsyncCommand(TestConnectionAsync);
@@ -103,6 +115,7 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     public ICommand LoadLedgersCommand => new AsyncCommand(LoadLedgersAsync);
     public ICommand SelectAllGroupsCommand => new RelayCommand(SelectAllGroups);
     public ICommand SelectAllLedgersCommand => new RelayCommand(SelectAllLedgers);
+    public ICommand LoadPreviewCommand => new AsyncCommand(LoadPreviewAsync);
     public ICommand ExtractCommand => new AsyncCommand(ExtractAndExportAsync);
     public ICommand CancelExtractionCommand => new RelayCommand(() => _extractionCancellation?.Cancel());
     public ICommand ToggleSidebarCommand => new RelayCommand(() =>
@@ -244,14 +257,54 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     private void SelectAllLedgers()
     {
         var targetState = !LedgerSelections.All(x => x.IsSelected);
-        foreach (var ledger in LedgerSelections)
-        {
-            ledger.IsSelected = targetState;
-        }
-
+        foreach (var ledger in LedgerSelections) ledger.IsSelected = targetState;
         ExtractionStatus = LedgerSelections.Count == 0
             ? "No ledgers are loaded to select."
             : $"All {LedgerSelections.Count} loaded ledgers are {(targetState ? "selected" : "cleared")}.";
+    }
+
+    private async Task LoadPreviewAsync()
+    {
+        if (SelectedCompany is null) { ExtractionStatus = "No company selected."; return; }
+        if (FromDate is not { } fromDate || ToDate is not { } toDate) { ExtractionStatus = "Select both dates using the calendar."; return; }
+        var from = DateOnly.FromDateTime(fromDate);
+        var to = DateOnly.FromDateTime(toDate);
+        if (from > to) { ExtractionStatus = "From Date must be on or before To Date."; return; }
+        if (!int.TryParse(BatchDays, out var batchDays) || batchDays < 1) { ExtractionStatus = "Batch size must be at least one day."; return; }
+        var selectedLedgers = LedgerSelections.Where(x => x.IsSelected).Select(x => x.Ledger).ToList();
+        if (selectedLedgers.Count == 0) { ExtractionStatus = "No ledgers selected for preview."; return; }
+        var selectedGroupName = GroupSelections.FirstOrDefault(x => x.IsSelected)?.Group.Name;
+
+        try
+        {
+            _extractionCancellation?.Dispose();
+            _extractionCancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCancellation.Token);
+            var progress = new Progress<ExtractionProgress>(x => ExtractionStatus = $"Preview — batch {x.CurrentBatch}/{x.TotalBatches}; {x.Percent}%");
+            var request = LedgerWiseExtractionRequest.Create(new CompanyContext(SelectedCompany, Profile()), DateRange.Create(from, to), selectedGroupName, selectedLedgers, Path.GetTempFileName(), batchDays);
+            var result = await extractionService.ExtractAsync(request, progress, _extractionCancellation.Token);
+            PopulatePreviewRows(result);
+            ExtractionStatus = $"Preview loaded: {result.TotalMatchedTransactionCount} transactions across {selectedLedgers.Count} ledger(s).";
+        }
+        catch (OperationCanceledException) { ExtractionStatus = "Preview cancelled."; }
+        catch (Exception ex) { ExtractionStatus = "Preview failed: " + ex.Message; }
+    }
+
+    private void PopulatePreviewRows(LedgerWiseExtractionResult result)
+    {
+        PreviewRows.Clear();
+        foreach (var ledgerResult in result.Ledgers)
+        {
+            var groupName = ledgerResult.Ledger.GroupName ?? "-";
+            var ledgerName = ledgerResult.Ledger.Name;
+            foreach (var tx in ledgerResult.Transactions)
+            {
+                var debit  = tx.Entry.Amount.Direction == DebitCredit.Debit  ? tx.Entry.Amount.Value : 0m;
+                var credit = tx.Entry.Amount.Direction == DebitCredit.Credit ? tx.Entry.Amount.Value : 0m;
+                PreviewRows.Add(new PreviewRow(groupName, ledgerName, tx.Voucher.Date, tx.Voucher.VoucherType ?? "", tx.Voucher.VoucherNumber ?? "", tx.Voucher.PartyLedgerName ?? tx.Voucher.Party?.Name, tx.Voucher.Narration, debit, credit));
+            }
+        }
+        OnChanged(nameof(PreviewHeader));
+        OnChanged(nameof(IsPreviewExpanded));
     }
 
     private async Task ExtractAndExportAsync()
@@ -288,8 +341,7 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
 
             var request = LedgerWiseExtractionRequest.Create(new CompanyContext(SelectedCompany, Profile()), DateRange.Create(from, to), selectedGroupName, selectedLedgers, outputPath, batchDays);
             var result = await exportService.ExtractAndExportAsync(request, progress, _extractionCancellation.Token);
-            Vouchers.Clear();
-            foreach (var voucher in result.Extraction.Ledgers.SelectMany(x => x.Transactions).Select(x => x.Voucher).DistinctBy(x => x.Guid ?? x.MasterId ?? x.SourceId)) Vouchers.Add(voucher);
+            PopulatePreviewRows(result.Extraction);
             ExtractionStatus = $"Completed export for {SelectedCompany.Name}. {result.Extraction.TotalVoucherCount} vouchers, {result.Extraction.TotalMatchedTransactionCount} ledger transactions. Saved: {result.OutputPath}";
         }
         catch (OperationCanceledException) { ExtractionStatus = "Extraction cancelled. No completion result was generated."; }

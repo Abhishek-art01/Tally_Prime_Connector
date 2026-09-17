@@ -300,7 +300,25 @@
                                 </DockPanel>
                             </StackPanel>
                             <StackPanel Grid.Column="2">
-                                <TextBlock Style="{StaticResource Label}" Text="Search &amp; Select Ledgers" />
+                                <DockPanel Margin="0,0,0,4">
+                                    <TextBlock Style="{StaticResource Label}" Text="Search &amp; Select Ledgers" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                                    <!-- selected count badge — hidden when 0 -->
+                                    <Border DockPanel.Dock="Right" Background="#2563EB" CornerRadius="10" Padding="7,1" Margin="6,0,0,0" VerticalAlignment="Center">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SelectedLedgerCount}" Value="0">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock FontSize="10" FontWeight="SemiBold" Foreground="White">
+                                            <Run Text="{Binding SelectedLedgerCount, Mode=OneWay}" /><Run Text=" selected" />
+                                        </TextBlock>
+                                    </Border>
+                                </DockPanel>
                                 <Grid>
                                     <TextBox x:Name="LedgerSearchBox" Style="{StaticResource Input}" Text="{Binding LedgerSearch, UpdateSourceTrigger=PropertyChanged}" GotKeyboardFocus="LedgerSearchBox_GotKeyboardFocus" PreviewMouseLeftButtonUp="LedgerSearchBox_PreviewMouseLeftButtonUp" />
                                     <TextBlock IsHitTestVisible="False" Foreground="#94A3B8" VerticalAlignment="Center" Margin="10,0,0,0" FontStyle="Italic">
@@ -352,11 +370,26 @@
                             <StackPanel Margin="0,0,10,0"><TextBlock Style="{StaticResource Label}" Text="From" /><local:IndianDatePicker Style="{StaticResource DateInput}" SelectedDate="{Binding FromDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
                             <StackPanel Grid.Column="1" Margin="0,0,10,0"><TextBlock Style="{StaticResource Label}" Text="To" /><local:IndianDatePicker Style="{StaticResource DateInput}" SelectedDate="{Binding ToDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
                             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom">
+                                <Button Style="{StaticResource SecondaryButton}" Content="Load Preview" Command="{Binding LoadPreviewCommand}" Margin="0,0,8,0" />
                                 <Button Style="{StaticResource PrimaryButton}" Content="Export Excel" Command="{Binding ExtractCommand}" Margin="0,0,8,0" />
                                 <Button Style="{StaticResource SecondaryButton}" Content="Cancel" Command="{Binding CancelExtractionCommand}" />
                             </StackPanel>
                         </Grid>
-                        <Expander Header="Preview" Margin="0,4,0,0"><DataGrid ItemsSource="{Binding Vouchers}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" Height="160" Margin="0,8,0,0" BorderBrush="{StaticResource Border}"><DataGrid.Columns><DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat={}{0:yyyy-MM-dd}}" Width="95" /><DataGridTextColumn Header="Type" Binding="{Binding VoucherType}" Width="130" /><DataGridTextColumn Header="Number" Binding="{Binding VoucherNumber}" Width="130" /><DataGridTextColumn Header="Party" Binding="{Binding PartyLedger}" Width="*" /></DataGrid.Columns></DataGrid></Expander>
+                        <Expander Header="{Binding PreviewHeader}" IsExpanded="{Binding IsPreviewExpanded}" Margin="0,4,0,0">
+                            <DataGrid ItemsSource="{Binding PreviewRows}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" Height="200" Margin="0,8,0,0" BorderBrush="{StaticResource Border}" GridLinesVisibility="Horizontal">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Group"   Binding="{Binding Group}"   Width="140" />
+                                    <DataGridTextColumn Header="Ledger"  Binding="{Binding Ledger}"  Width="160" />
+                                    <DataGridTextColumn Header="Date"    Binding="{Binding Date, StringFormat={}{0:yyyy-MM-dd}}" Width="95" />
+                                    <DataGridTextColumn Header="Type"    Binding="{Binding VoucherType}"  Width="120" />
+                                    <DataGridTextColumn Header="Number"  Binding="{Binding VoucherNumber}" Width="110" />
+                                    <DataGridTextColumn Header="Party"   Binding="{Binding Party}"   Width="160" />
+                                    <DataGridTextColumn Header="Narration" Binding="{Binding Narration}" Width="200" />
+                                    <DataGridTextColumn Header="Debit"   Binding="{Binding Debit,  StringFormat={}{0:N2}}" Width="100" />
+                                    <DataGridTextColumn Header="Credit"  Binding="{Binding Credit, StringFormat={}{0:N2}}" Width="100" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </Expander>
                     </StackPanel>
                 </Border>
                 </StackPanel>
