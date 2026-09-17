@@ -37,6 +37,18 @@ public partial class MainWindow : Window
         Top = workArea.Top + ((workArea.Height - Height) / 2);
     }
 
+    protected override void OnDeactivated(EventArgs e)
+    {
+        base.OnDeactivated(e);
+        if (LedgerPopup != null) LedgerPopup.IsOpen = false;
+    }
+
+    protected override void OnLocationChanged(EventArgs e)
+    {
+        base.OnLocationChanged(e);
+        if (LedgerPopup != null) LedgerPopup.IsOpen = false;
+    }
+
     private void ContentScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
         var originalElement = e.OriginalSource as DependencyObject;
