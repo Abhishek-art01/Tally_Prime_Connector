@@ -123,10 +123,21 @@ public partial class MainWindow : Window
         if (LedgerPopup != null && LedgerPopup.IsOpen)
         {
             var target = e.OriginalSource as DependencyObject;
-            if (target != null && FindAncestor<TextBox>(target) != LedgerSearchBox)
+            if (target != null && FindAncestor<TextBox>(target) != LedgerSearchBox && !IsDescendant(LedgerPopup.Child, target))
             {
                 LedgerPopup.IsOpen = false;
             }
         }
+    }
+
+    private static bool IsDescendant(DependencyObject? ancestor, DependencyObject? element)
+    {
+        if (ancestor == null) return false;
+        while (element != null)
+        {
+            if (ReferenceEquals(element, ancestor)) return true;
+            element = element is Visual ? VisualTreeHelper.GetParent(element) : LogicalTreeHelper.GetParent(element);
+        }
+        return false;
     }
 }
