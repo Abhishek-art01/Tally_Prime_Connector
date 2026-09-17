@@ -23,7 +23,7 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
 {
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private CancellationTokenSource? _extractionCancellation;
-    private string _selectedPage = "Dashboard", _host = "localhost", _port = "9000", _connectionResult = "No connection test has been run.", _ledgerSearch = "", _batchDays = LedgerWiseExtractionRequest.DefaultBatchDays.ToString(), _exportPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Tally Ledger Export.xlsx"), _lastExportPath = "", _extractionStatus = "Select a company, dates, one or more ledgers, and an output file.";
+    private string _selectedPage = "Dashboard", _host = "localhost", _port = "9000", _connectionResult = "No connection test has been run.", _ledgerSearch = "", _placeholderLedgerText = "Search ledgers...", _batchDays = LedgerWiseExtractionRequest.DefaultBatchDays.ToString(), _exportPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Tally Ledger Export.xlsx"), _lastExportPath = "", _extractionStatus = "Select a company, dates, one or more ledgers, and an output file.";
     private DateTime? _fromDate = DateTime.Today, _toDate = DateTime.Today;
     private bool _isSidebarCollapsed;
     private CompanyInfo? _selectedCompany;
@@ -43,6 +43,7 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     public string Port { get => _port; set { _port = value; OnChanged(); } }
     public string ConnectionResult { get => _connectionResult; set { _connectionResult = value; OnChanged(); } }
     public string LedgerSearch { get => _ledgerSearch; set { _ledgerSearch = value; OnChanged(); OnChanged(nameof(FilteredLedgerSelections)); } }
+    public string PlaceholderLedgerText { get => _placeholderLedgerText; set { _placeholderLedgerText = value; OnChanged(); } }
     public IEnumerable<LedgerSelectionItem> FilteredLedgerSelections => LedgerSelections.Where(x => string.IsNullOrWhiteSpace(LedgerSearch) || x.Ledger.Name.Contains(LedgerSearch, StringComparison.OrdinalIgnoreCase));
     public DateTime? FromDate { get => _fromDate; set { _fromDate = value; OnChanged(); } }
     public DateTime? ToDate { get => _toDate; set { _toDate = value; OnChanged(); } }
@@ -146,7 +147,7 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
                 ? $"No ledgers belong to the selected group '{selectedGroup.Name}'."
                 : $"{LedgerSelections.Count} ledgers loaded from '{selectedGroup.Name}'. Tick one or more exact ledger names for export.";
 
-            LedgerSearch = LedgerSelections.Count > 0 ? LedgerSelections[0].Ledger.Name : "";
+            PlaceholderLedgerText = LedgerSelections.Count > 0 ? $"{LedgerSelections.Count} ledgers loaded (e.g. {LedgerSelections[0].Ledger.Name})" : "Search ledgers...";
         }
         catch (Exception exception) { ExtractionStatus = "Unable to load ledgers from TallyPrime: " + exception.Message; }
     }

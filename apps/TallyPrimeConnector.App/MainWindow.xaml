@@ -170,6 +170,25 @@
                                 <TextBlock Style="{StaticResource Label}" Text="Search &amp; Select Ledgers" />
                                 <Grid>
                                     <TextBox x:Name="LedgerSearchBox" Style="{StaticResource Input}" Text="{Binding LedgerSearch, UpdateSourceTrigger=PropertyChanged}" GotKeyboardFocus="LedgerSearchBox_GotKeyboardFocus" PreviewMouseLeftButtonUp="LedgerSearchBox_PreviewMouseLeftButtonUp" />
+                                    <TextBlock IsHitTestVisible="False" Foreground="#94A3B8" VerticalAlignment="Center" Margin="10,0,0,0" FontStyle="Italic">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <MultiDataTrigger>
+                                                        <MultiDataTrigger.Conditions>
+                                                            <Condition Binding="{Binding Text, ElementName=LedgerSearchBox}" Value="" />
+                                                            <Condition Binding="{Binding IsKeyboardFocused, ElementName=LedgerSearchBox}" Value="False" />
+                                                        </MultiDataTrigger.Conditions>
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </MultiDataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                        <TextBlock.Text>
+                                            <Binding Path="PlaceholderLedgerText" />
+                                        </TextBlock.Text>
+                                    </TextBlock>
                                     <Popup x:Name="LedgerPopup" PlacementTarget="{Binding ElementName=LedgerSearchBox}" Placement="Bottom" StaysOpen="True" MaxHeight="300" Width="{Binding ElementName=LedgerSearchBox, Path=ActualWidth}">
                                         <Border Background="White" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="4" Margin="0,2,0,0">
                                             <StackPanel>
