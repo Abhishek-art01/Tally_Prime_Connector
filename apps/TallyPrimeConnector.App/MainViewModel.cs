@@ -60,7 +60,7 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     
     public string CompanySearch { get => _companySearch; set { _companySearch = value; OnChanged(); OnChanged(nameof(FilteredCompanySelections)); } }
     public string PlaceholderCompanyText { get => _placeholderCompanyText; set { _placeholderCompanyText = value; OnChanged(); } }
-    public string SelectAllCompaniesText => CompanySelections.Count > 0 && CompanySelections.All(x => x.IsSelected) ? "Clear all" : "Select all";
+    public CompanyInfo? SelectedCompany => CompanySelections.FirstOrDefault(x => x.IsSelected)?.Company;
     public IEnumerable<CompanySelectionItem> FilteredCompanySelections => CompanySelections.Where(x => string.IsNullOrWhiteSpace(CompanySearch) || x.Company.Name.Contains(CompanySearch, StringComparison.OrdinalIgnoreCase));
 
     public string GroupSearch { get => _groupSearch; set { _groupSearch = value; OnChanged(); OnChanged(nameof(FilteredGroupSelections)); } }
@@ -73,7 +73,21 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     public string SelectAllText => LedgerSelections.Count > 0 && LedgerSelections.All(x => x.IsSelected) ? "Clear all" : "Select all";
     public IEnumerable<LedgerSelectionItem> FilteredLedgerSelections => LedgerSelections.Where(x => string.IsNullOrWhiteSpace(LedgerSearch) || x.Ledger.Name.Contains(LedgerSearch, StringComparison.OrdinalIgnoreCase));
 
-    private void OnCompanySelectionItemPropertyChanged(object? sender, PropertyChangedEventArgs e) { if (e.PropertyName == nameof(CompanySelectionItem.IsSelected)) OnChanged(nameof(SelectAllCompaniesText)); }
+    private bool _updatingCompanySelection;
+    private void OnCompanySelectionItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(CompanySelectionItem.IsSelected) || _updatingCompanySelection) return;
+        if (sender is CompanySelectionItem selected && selected.IsSelected)
+        {
+            _updatingCompanySelection = true;
+            foreach (var item in CompanySelections)
+                if (!ReferenceEquals(item, selected)) item.IsSelected = false;
+            _updatingCompanySelection = false;
+        }
+        // Update placeholder to reflect selection
+        var sel = SelectedCompany;
+        PlaceholderCompanyText = sel != null ? sel.Name : (CompanySelections.Count > 0 ? $"{CompanySelections.Count} companies loaded" : "Search companies...");
+    }
     private void OnGroupSelectionItemPropertyChanged(object? sender, PropertyChangedEventArgs e) { if (e.PropertyName == nameof(GroupSelectionItem.IsSelected)) OnChanged(nameof(SelectAllGroupsText)); }
     private void OnLedgerSelectionItemPropertyChanged(object? sender, PropertyChangedEventArgs e) { if (e.PropertyName == nameof(LedgerSelectionItem.IsSelected)) OnChanged(nameof(SelectAllText)); }
 
@@ -148,28 +162,19 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
             foreach (var item in GroupSelections) item.PropertyChanged -= OnGroupSelectionItemPropertyChanged;
             GroupSelections.Clear();
 
-            var selectedCompanies = CompanySelections.Where(x => x.IsSelected).Select(x => x.Company).ToList();
-            var allGroups = new HashSet<string>();
-
-            foreach (var company in selectedCompanies)
+            foreach (var group in await groupService.GetGroupsAsync(SelectedCompany!, _lifetimeCancellation.Token))
             {
-                foreach (var group in await groupService.GetGroupsAsync(company, _lifetimeCancellation.Token))
-                {
-                    if (allGroups.Add(group.Name))
-                    {
-                        var item = new GroupSelectionItem(group);
-                        item.PropertyChanged += OnGroupSelectionItemPropertyChanged;
-                        GroupSelections.Add(item);
-                    }
-                }
+                var item = new GroupSelectionItem(group);
+                item.PropertyChanged += OnGroupSelectionItemPropertyChanged;
+                GroupSelections.Add(item);
             }
 
             OnChanged(nameof(FilteredGroupSelections));
             OnChanged(nameof(SelectAllGroupsText));
             ExtractionStatus = GroupSelections.Count == 0
-                ? "No groups were returned across the selected companies."
-                : $"{GroupSelections.Count} unique groups loaded. Select groups, then load ledgers.";
-            
+                ? "No groups were returned for the selected company."
+                : $"{GroupSelections.Count} groups loaded. Select groups, then load ledgers.";
+
             PlaceholderGroupText = GroupSelections.Count > 0 ? $"{GroupSelections.Count} groups loaded (e.g. {GroupSelections[0].Group.Name})" : "Search groups...";
         }
         catch (Exception exception) { ExtractionStatus = "Unable to load groups from TallyPrime: " + exception.Message; }
@@ -198,22 +203,17 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
             Ledgers.Clear();
             LedgerSelections.Clear();
 
-            var selectedCompanies = CompanySelections.Where(x => x.IsSelected).Select(x => x.Company).ToList();
             var allLedgers = new HashSet<string>();
-
-            foreach (var company in selectedCompanies)
+            foreach (var group in selectedGroups)
             {
-                foreach (var group in selectedGroups)
+                foreach (var ledger in await ledgerService.GetLedgersAsync(SelectedCompany!, group.Name, _lifetimeCancellation.Token))
                 {
-                    foreach (var ledger in await ledgerService.GetLedgersAsync(company, group.Name, _lifetimeCancellation.Token))
+                    if (allLedgers.Add(ledger.Name))
                     {
-                        if (allLedgers.Add(ledger.Name))
-                        {
-                            Ledgers.Add(ledger);
-                            var item = new LedgerSelectionItem(ledger);
-                            item.PropertyChanged += OnLedgerSelectionItemPropertyChanged;
-                            LedgerSelections.Add(item);
-                        }
+                        Ledgers.Add(ledger);
+                        var item = new LedgerSelectionItem(ledger);
+                        item.PropertyChanged += OnLedgerSelectionItemPropertyChanged;
+                        LedgerSelections.Add(item);
                     }
                 }
             }
@@ -231,12 +231,12 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
 
     private async Task<bool> EnsureCompanyAsync()
     {
-        if (CompanySelections.Any(x => x.IsSelected)) return true;
+        if (SelectedCompany is not null) return true;
 
         await LoadCompaniesAsync();
-        if (CompanySelections.Any(x => x.IsSelected)) return true;
+        if (SelectedCompany is not null) return true;
 
-        ExtractionStatus = "No company is selected. Load companies, then select at least one.";
+        ExtractionStatus = "No company is selected. Load companies, then select one.";
         return false;
     }
 
@@ -282,8 +282,7 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
 
     private async Task ExtractAndExportAsync()
     {
-        var selectedCompanies = CompanySelections.Where(x => x.IsSelected).Select(x => x.Company).ToList();
-        if (selectedCompanies.Count == 0) { ExtractionStatus = "No companies selected. Please select at least one company."; return; }
+        if (SelectedCompany is null) { ExtractionStatus = "No company selected. Please select a company first."; return; }
         if (FromDate is not { } fromDate || ToDate is not { } toDate) { ExtractionStatus = "Select both dates using the calendar."; return; }
         var from = DateOnly.FromDateTime(fromDate);
         var to = DateOnly.FromDateTime(toDate);
@@ -291,7 +290,7 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
         if (!int.TryParse(BatchDays, out var batchDays) || batchDays < 1) { ExtractionStatus = "Batch size must be at least one day."; return; }
         var selectedLedgers = LedgerSelections.Where(x => x.IsSelected).Select(x => x.Ledger).ToList();
         if (selectedLedgers.Count == 0) { ExtractionStatus = "No selected ledgers were provided."; return; }
-        var selectedGroupNames = GroupSelections.Where(x => x.IsSelected).Select(x => x.Group.Name).FirstOrDefault();
+        var selectedGroupName = GroupSelections.FirstOrDefault(x => x.IsSelected)?.Group.Name;
 
         try
         {
@@ -299,22 +298,12 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
             _extractionCancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCancellation.Token);
             var progress = new Progress<ExtractionProgress>(x => ExtractionStatus = $"{x.Stage} — batch {x.CurrentBatch}/{x.TotalBatches}; range {x.CurrentDateRange?.From:yyyy-MM-dd} to {x.CurrentDateRange?.To:yyyy-MM-dd}; vouchers {x.RecordsFound}; matched {x.MatchedTransactions}; {x.Percent}%");
 
+            var request = LedgerWiseExtractionRequest.Create(new CompanyContext(SelectedCompany, Profile()), DateRange.Create(from, to), selectedGroupName, selectedLedgers, ExportPath, batchDays);
+            var result = await exportService.ExtractAndExportAsync(request, progress, _extractionCancellation.Token);
             Vouchers.Clear();
-            int totalVouchers = 0, totalTransactions = 0;
-            string lastPath = ExportPath;
-
-            foreach (var company in selectedCompanies)
-            {
-                var request = LedgerWiseExtractionRequest.Create(new CompanyContext(company, Profile()), DateRange.Create(from, to), selectedGroupNames, selectedLedgers, ExportPath, batchDays);
-                var result = await exportService.ExtractAndExportAsync(request, progress, _extractionCancellation.Token);
-                foreach (var voucher in result.Extraction.Ledgers.SelectMany(x => x.Transactions).Select(x => x.Voucher).DistinctBy(x => x.Guid ?? x.MasterId ?? x.SourceId)) Vouchers.Add(voucher);
-                totalVouchers += result.Extraction.TotalVoucherCount;
-                totalTransactions += result.Extraction.TotalMatchedTransactionCount;
-                lastPath = result.OutputPath;
-            }
-
-            LastExportPath = lastPath;
-            ExtractionStatus = $"Completed export for {selectedCompanies.Count} company/companies. {totalVouchers} vouchers, {totalTransactions} ledger transactions. Workbook: {lastPath}";
+            foreach (var voucher in result.Extraction.Ledgers.SelectMany(x => x.Transactions).Select(x => x.Voucher).DistinctBy(x => x.Guid ?? x.MasterId ?? x.SourceId)) Vouchers.Add(voucher);
+            LastExportPath = result.OutputPath;
+            ExtractionStatus = $"Completed export for {SelectedCompany.Name}. {result.Extraction.TotalVoucherCount} vouchers, {result.Extraction.TotalMatchedTransactionCount} ledger transactions. Workbook: {result.OutputPath}";
         }
         catch (OperationCanceledException) { ExtractionStatus = "Extraction cancelled. No completion result was generated."; }
         catch (TallyProtocolException exception) { ExtractionStatus = "Tally returned data outside the requested date scope. Extraction stopped: " + exception.Message; }

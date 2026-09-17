@@ -168,7 +168,6 @@
                                 <TextBlock Style="{StaticResource Label}" Text="Search &amp; Select Companies" />
                                 <DockPanel>
                                     <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Content="Groups →" Command="{Binding LoadGroupsCommand}" Margin="4,0,0,0" />
-                                    <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Content="Load" Command="{Binding LoadCompaniesCommand}" Margin="4,0,0,0" />
                                     <Grid>
                                         <TextBox x:Name="CompanySearchBox" Style="{StaticResource Input}" Text="{Binding CompanySearch, UpdateSourceTrigger=PropertyChanged}" GotKeyboardFocus="CompanySearchBox_GotKeyboardFocus" PreviewMouseLeftButtonUp="CompanySearchBox_PreviewMouseLeftButtonUp" />
                                         <TextBlock IsHitTestVisible="False" Foreground="#94A3B8" VerticalAlignment="Center" Margin="10,0,0,0" FontStyle="Italic">
@@ -190,18 +189,15 @@
                                         </TextBlock>
                                         <Popup x:Name="CompanyPopup" PlacementTarget="{Binding ElementName=CompanySearchBox}" Placement="Bottom" StaysOpen="True" MaxHeight="300" Width="{Binding ElementName=CompanySearchBox, Path=ActualWidth}">
                                             <Border Background="White" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="4" Margin="0,2,0,0">
-                                                <StackPanel>
-                                                    <Button Style="{StaticResource SecondaryButton}" Content="{Binding SelectAllCompaniesText}" Command="{Binding SelectAllCompaniesCommand}" Margin="4" BorderThickness="0" Background="#F8FAFC" />
-                                                    <ListBox ItemsSource="{Binding FilteredCompanySelections}" BorderThickness="0" MaxHeight="200" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                                        <ListBox.ItemTemplate>
-                                                            <DataTemplate>
-                                                                <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,2">
-                                                                    <TextBlock Text="{Binding Company.Name}" TextWrapping="Wrap" />
-                                                                </CheckBox>
-                                                            </DataTemplate>
-                                                        </ListBox.ItemTemplate>
-                                                    </ListBox>
-                                                </StackPanel>
+                                                <ListBox ItemsSource="{Binding FilteredCompanySelections}" BorderThickness="0" MaxHeight="250" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                                    <ListBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="4,3">
+                                                                <TextBlock Text="{Binding Company.Name}" TextWrapping="Wrap" />
+                                                            </CheckBox>
+                                                        </DataTemplate>
+                                                    </ListBox.ItemTemplate>
+                                                </ListBox>
                                             </Border>
                                         </Popup>
                                     </Grid>
