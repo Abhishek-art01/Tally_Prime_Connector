@@ -44,7 +44,16 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     public string ConnectionResult { get => _connectionResult; set { _connectionResult = value; OnChanged(); } }
     public string LedgerSearch { get => _ledgerSearch; set { _ledgerSearch = value; OnChanged(); OnChanged(nameof(FilteredLedgerSelections)); } }
     public string PlaceholderLedgerText { get => _placeholderLedgerText; set { _placeholderLedgerText = value; OnChanged(); } }
+    public string SelectAllText => LedgerSelections.Count > 0 && LedgerSelections.All(x => x.IsSelected) ? "Clear all" : "Select all";
     public IEnumerable<LedgerSelectionItem> FilteredLedgerSelections => LedgerSelections.Where(x => string.IsNullOrWhiteSpace(LedgerSearch) || x.Ledger.Name.Contains(LedgerSearch, StringComparison.OrdinalIgnoreCase));
+
+    private void OnLedgerSelectionItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(LedgerSelectionItem.IsSelected))
+        {
+            OnChanged(nameof(SelectAllText));
+        }
+    }
     public DateTime? FromDate { get => _fromDate; set { _fromDate = value; OnChanged(); } }
     public DateTime? ToDate { get => _toDate; set { _toDate = value; OnChanged(); } }
     public string BatchDays { get => _batchDays; set { _batchDays = value; OnChanged(); } }
@@ -135,14 +144,18 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
 
         try
         {
+            foreach (var item in LedgerSelections) item.PropertyChanged -= OnLedgerSelectionItemPropertyChanged;
             Ledgers.Clear();
             LedgerSelections.Clear();
             foreach (var ledger in await ledgerService.GetLedgersAsync(SelectedCompany!, selectedGroup.Name, _lifetimeCancellation.Token))
             {
                 Ledgers.Add(ledger);
-                LedgerSelections.Add(new LedgerSelectionItem(ledger));
+                var item = new LedgerSelectionItem(ledger);
+                item.PropertyChanged += OnLedgerSelectionItemPropertyChanged;
+                LedgerSelections.Add(item);
             }
             OnChanged(nameof(FilteredLedgerSelections));
+            OnChanged(nameof(SelectAllText));
             ExtractionStatus = LedgerSelections.Count == 0
                 ? $"No ledgers belong to the selected group '{selectedGroup.Name}'."
                 : $"{LedgerSelections.Count} ledgers loaded from '{selectedGroup.Name}'. Tick one or more exact ledger names for export.";
@@ -165,14 +178,15 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
 
     private void SelectAllLedgers()
     {
+        var targetState = !LedgerSelections.All(x => x.IsSelected);
         foreach (var ledger in LedgerSelections)
         {
-            ledger.IsSelected = true;
+            ledger.IsSelected = targetState;
         }
 
         ExtractionStatus = LedgerSelections.Count == 0
             ? "No ledgers are loaded to select."
-            : $"All {LedgerSelections.Count} loaded ledgers are selected.";
+            : $"All {LedgerSelections.Count} loaded ledgers are {(targetState ? "selected" : "cleared")}.";
     }
 
     private void ChooseExportPath()

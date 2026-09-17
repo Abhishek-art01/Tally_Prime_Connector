@@ -192,7 +192,7 @@
                                     <Popup x:Name="LedgerPopup" PlacementTarget="{Binding ElementName=LedgerSearchBox}" Placement="Bottom" StaysOpen="True" MaxHeight="300" Width="{Binding ElementName=LedgerSearchBox, Path=ActualWidth}">
                                         <Border Background="White" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="4" Margin="0,2,0,0">
                                             <StackPanel>
-                                                <Button Style="{StaticResource SecondaryButton}" Content="Select all" Command="{Binding SelectAllLedgersCommand}" Margin="4" BorderThickness="0" Background="#F8FAFC" />
+                                                <Button Style="{StaticResource SecondaryButton}" Content="{Binding SelectAllText}" Command="{Binding SelectAllLedgersCommand}" Margin="4" BorderThickness="0" Background="#F8FAFC" />
                                                 <ListBox ItemsSource="{Binding FilteredLedgerSelections}" BorderThickness="0" MaxHeight="200" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                                     <ListBox.ItemTemplate>
                                                         <DataTemplate>
