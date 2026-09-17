@@ -108,12 +108,12 @@ public partial class MainWindow : Window
         return null;
     }
 
-    private void LedgerSearchBox_GotFocus(object sender, RoutedEventArgs e)
+    private void LedgerSearchBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
     {
         if (LedgerPopup != null) LedgerPopup.IsOpen = true;
     }
 
-    private void LedgerSearchBox_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+    private void LedgerSearchBox_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         if (LedgerPopup != null && !LedgerPopup.IsOpen) LedgerPopup.IsOpen = true;
     }

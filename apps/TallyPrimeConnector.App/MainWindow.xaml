@@ -168,7 +168,7 @@
                             <StackPanel Grid.Column="2">
                                 <TextBlock Style="{StaticResource Label}" Text="Search &amp; Select Ledgers" />
                                 <Grid>
-                                    <TextBox x:Name="LedgerSearchBox" Style="{StaticResource Input}" Text="{Binding LedgerSearch, UpdateSourceTrigger=PropertyChanged}" GotFocus="LedgerSearchBox_GotFocus" PreviewMouseDown="LedgerSearchBox_PreviewMouseDown" />
+                                    <TextBox x:Name="LedgerSearchBox" Style="{StaticResource Input}" Text="{Binding LedgerSearch, UpdateSourceTrigger=PropertyChanged}" GotKeyboardFocus="LedgerSearchBox_GotKeyboardFocus" PreviewMouseLeftButtonUp="LedgerSearchBox_PreviewMouseLeftButtonUp" />
                                     <Popup x:Name="LedgerPopup" PlacementTarget="{Binding ElementName=LedgerSearchBox}" StaysOpen="False" MaxHeight="300" MinWidth="{Binding ElementName=LedgerSearchBox, Path=ActualWidth}">
                                         <Border Background="White" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="4" Margin="0,2,0,0">
                                             <StackPanel>
