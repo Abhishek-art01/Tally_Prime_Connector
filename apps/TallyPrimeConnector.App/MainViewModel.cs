@@ -30,7 +30,7 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     private GroupInfo? _selectedGroup;
 
     public event PropertyChangedEventHandler? PropertyChanged;
-    public IReadOnlyList<string> NavigationItems { get; } = ["Dashboard", "Connection", "Ledgers", "Export"];
+    public IReadOnlyList<string> NavigationItems { get; } = ["Dashboard"];
     public ObservableCollection<CompanyInfo> Companies { get; } = [];
     public ObservableCollection<GroupInfo> Groups { get; } = [];
     public ObservableCollection<LedgerInfo> Ledgers { get; } = [];
