@@ -40,13 +40,13 @@ public partial class MainWindow : Window
     protected override void OnDeactivated(EventArgs e)
     {
         base.OnDeactivated(e);
-        if (LedgerPopup != null) LedgerPopup.IsOpen = false;
+        CloseAllPopups();
     }
 
     protected override void OnLocationChanged(EventArgs e)
     {
         base.OnLocationChanged(e);
-        if (LedgerPopup != null) LedgerPopup.IsOpen = false;
+        CloseAllPopups();
     }
 
     private void ContentScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -120,26 +120,61 @@ public partial class MainWindow : Window
         return null;
     }
 
+    private void CloseAllPopups()
+    {
+        if (CompanyPopup != null) CompanyPopup.IsOpen = false;
+        if (GroupPopup != null) GroupPopup.IsOpen = false;
+        if (LedgerPopup != null) LedgerPopup.IsOpen = false;
+    }
+
+    private void CompanySearchBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        CloseAllPopups();
+        if (CompanyPopup != null) CompanyPopup.IsOpen = true;
+    }
+
+    private void CompanySearchBox_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (CompanyPopup != null && !CompanyPopup.IsOpen) { CloseAllPopups(); CompanyPopup.IsOpen = true; }
+    }
+
+    private void GroupSearchBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        CloseAllPopups();
+        if (GroupPopup != null) GroupPopup.IsOpen = true;
+    }
+
+    private void GroupSearchBox_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (GroupPopup != null && !GroupPopup.IsOpen) { CloseAllPopups(); GroupPopup.IsOpen = true; }
+    }
+
     private void LedgerSearchBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
     {
+        CloseAllPopups();
         if (LedgerPopup != null) LedgerPopup.IsOpen = true;
     }
 
     private void LedgerSearchBox_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-        if (LedgerPopup != null && !LedgerPopup.IsOpen) LedgerPopup.IsOpen = true;
+        if (LedgerPopup != null && !LedgerPopup.IsOpen) { CloseAllPopups(); LedgerPopup.IsOpen = true; }
     }
 
     private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (LedgerPopup != null && LedgerPopup.IsOpen)
-        {
-            var target = e.OriginalSource as DependencyObject;
-            if (target != null && FindAncestor<TextBox>(target) != LedgerSearchBox && !IsDescendant(LedgerPopup.Child, target))
-            {
-                LedgerPopup.IsOpen = false;
-            }
-        }
+        var target = e.OriginalSource as DependencyObject;
+        if (target == null) return;
+
+        bool clickedCompanyBox = FindAncestor<TextBox>(target) == CompanySearchBox;
+        bool clickedGroupBox = FindAncestor<TextBox>(target) == GroupSearchBox;
+        bool clickedLedgerBox = FindAncestor<TextBox>(target) == LedgerSearchBox;
+        bool insideCompanyPopup = CompanyPopup != null && IsDescendant(CompanyPopup.Child, target);
+        bool insideGroupPopup = GroupPopup != null && IsDescendant(GroupPopup.Child, target);
+        bool insideLedgerPopup = LedgerPopup != null && IsDescendant(LedgerPopup.Child, target);
+
+        if (!clickedCompanyBox && !insideCompanyPopup && CompanyPopup?.IsOpen == true) CompanyPopup.IsOpen = false;
+        if (!clickedGroupBox && !insideGroupPopup && GroupPopup?.IsOpen == true) GroupPopup.IsOpen = false;
+        if (!clickedLedgerBox && !insideLedgerPopup && LedgerPopup?.IsOpen == true) LedgerPopup.IsOpen = false;
     }
 
     private static bool IsDescendant(DependencyObject? ancestor, DependencyObject? element)
