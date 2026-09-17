@@ -103,7 +103,6 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     public ICommand LoadCompaniesCommand => new AsyncCommand(LoadCompaniesAsync);
     public ICommand LoadGroupsCommand => new AsyncCommand(LoadGroupsAsync);
     public ICommand LoadLedgersCommand => new AsyncCommand(LoadLedgersAsync);
-    public ICommand SelectAllCompaniesCommand => new RelayCommand(SelectAllCompanies);
     public ICommand SelectAllGroupsCommand => new RelayCommand(SelectAllGroups);
     public ICommand SelectAllLedgersCommand => new RelayCommand(SelectAllLedgers);
     public ICommand ChooseExportPathCommand => new RelayCommand(ChooseExportPath);
@@ -144,7 +143,6 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
                 CompanySelections.Add(item);
             }
             OnChanged(nameof(FilteredCompanySelections));
-            OnChanged(nameof(SelectAllCompaniesText));
             ExtractionStatus = CompanySelections.Count == 0 ? "No companies were returned. Confirm that a company is loaded in TallyPrime." : $"{CompanySelections.Count} companies loaded. Select companies, then load groups.";
             
             PlaceholderCompanyText = CompanySelections.Count > 0 ? $"{CompanySelections.Count} companies loaded (e.g. {CompanySelections[0].Company.Name})" : "Search companies...";
@@ -238,13 +236,6 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
 
         ExtractionStatus = "No company is selected. Load companies, then select one.";
         return false;
-    }
-
-    private void SelectAllCompanies()
-    {
-        var targetState = !CompanySelections.All(x => x.IsSelected);
-        foreach (var company in CompanySelections) company.IsSelected = targetState;
-        ExtractionStatus = CompanySelections.Count == 0 ? "No companies are loaded to select." : $"All {CompanySelections.Count} loaded companies are {(targetState ? "selected" : "cleared")}.";
     }
 
     private void SelectAllGroups()
