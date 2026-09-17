@@ -280,7 +280,8 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
             _extractionCancellation?.Dispose();
             _extractionCancellation = CancellationTokenSource.CreateLinkedTokenSource(_lifetimeCancellation.Token);
             var progress = new Progress<ExtractionProgress>(x => ExtractionStatus = $"Preview — batch {x.CurrentBatch}/{x.TotalBatches}; {x.Percent}%");
-            var request = LedgerWiseExtractionRequest.Create(new CompanyContext(SelectedCompany, Profile()), DateRange.Create(from, to), selectedGroupName, selectedLedgers, Path.GetTempFileName(), batchDays);
+            var tempPath = Path.Combine(Path.GetTempPath(), $"preview_{Guid.NewGuid():N}.xlsx");
+            var request = LedgerWiseExtractionRequest.Create(new CompanyContext(SelectedCompany, Profile()), DateRange.Create(from, to), selectedGroupName, selectedLedgers, tempPath, batchDays);
             var result = await extractionService.ExtractAsync(request, progress, _extractionCancellation.Token);
             PopulatePreviewRows(result);
             ExtractionStatus = $"Preview loaded: {result.TotalMatchedTransactionCount} transactions across {selectedLedgers.Count} ledger(s).";
