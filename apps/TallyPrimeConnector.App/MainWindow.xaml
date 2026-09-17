@@ -152,10 +152,11 @@
 
                 <Border Style="{StaticResource Card}">
                     <Grid>
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="110" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="110" /><ColumnDefinition Width="90" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                         <StackPanel Margin="0,0,10,0"><TextBlock Style="{StaticResource Label}" Text="Host" /><TextBox Style="{StaticResource Input}" Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
                         <StackPanel Grid.Column="1" Margin="0,0,10,0"><TextBlock Style="{StaticResource Label}" Text="Port" /><TextBox Style="{StaticResource Input}" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom"><Button Style="{StaticResource PrimaryButton}" Content="Test" Command="{Binding TestConnectionCommand}" Margin="0,0,8,0" /><Button Style="{StaticResource SecondaryButton}" Content="Load company" Command="{Binding LoadCompaniesCommand}" /></StackPanel>
+                        <StackPanel Grid.Column="2" Margin="0,0,10,0"><TextBlock Style="{StaticResource Label}" Text="Batch days" /><TextBox Style="{StaticResource Input}" Text="{Binding BatchDays, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
+                        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom"><Button Style="{StaticResource PrimaryButton}" Content="Test" Command="{Binding TestConnectionCommand}" Margin="0,0,8,0" /><Button Style="{StaticResource SecondaryButton}" Content="Load company" Command="{Binding LoadCompaniesCommand}" /></StackPanel>
                     </Grid>
                 </Border>
                 <TextBlock Text="{Binding ConnectionResult}" Margin="4,-8,4,14" FontSize="11" Foreground="#64748B" TextTrimming="CharacterEllipsis" />
@@ -294,11 +295,10 @@
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
                         <Grid Margin="0,0,0,14">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="1.1*" /><ColumnDefinition Width=".7*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                             <StackPanel Margin="0,0,10,0"><TextBlock Style="{StaticResource Label}" Text="From" /><local:IndianDatePicker Style="{StaticResource DateInput}" SelectedDate="{Binding FromDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
                             <StackPanel Grid.Column="1" Margin="0,0,10,0"><TextBlock Style="{StaticResource Label}" Text="To" /><local:IndianDatePicker Style="{StaticResource DateInput}" SelectedDate="{Binding ToDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
-                            <StackPanel Grid.Column="2" Margin="0,0,10,0"><TextBlock Style="{StaticResource Label}" Text="Batch days" /><TextBox Style="{StaticResource Input}" Text="{Binding BatchDays, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
-                            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom"><Button Style="{StaticResource PrimaryButton}" Content="Export Excel" Command="{Binding ExtractCommand}" Margin="0,0,8,0" /><Button Style="{StaticResource SecondaryButton}" Content="Cancel" Command="{Binding CancelExtractionCommand}" /></StackPanel>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom"><Button Style="{StaticResource PrimaryButton}" Content="Export Excel" Command="{Binding ExtractCommand}" Margin="0,0,8,0" /><Button Style="{StaticResource SecondaryButton}" Content="Cancel" Command="{Binding CancelExtractionCommand}" /></StackPanel>
                         </Grid>
                         <DockPanel><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Style="{StaticResource SecondaryButton}" Content="Choose file" Command="{Binding ChooseExportPathCommand}" Margin="8,0,0,0" /><Button Style="{StaticResource SecondaryButton}" Content="Reveal" Command="{Binding RevealExportCommand}" Margin="8,0,0,0" /></StackPanel><TextBox Style="{StaticResource Input}" Text="{Binding ExportPath, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" /></DockPanel>
                         <Expander Header="Preview" Margin="0,14,0,0"><DataGrid ItemsSource="{Binding Vouchers}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" Height="160" Margin="0,8,0,0" BorderBrush="{StaticResource Border}"><DataGrid.Columns><DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat={}{0:yyyy-MM-dd}}" Width="95" /><DataGridTextColumn Header="Type" Binding="{Binding VoucherType}" Width="130" /><DataGridTextColumn Header="Number" Binding="{Binding VoucherNumber}" Width="130" /><DataGridTextColumn Header="Party" Binding="{Binding PartyLedger}" Width="*" /></DataGrid.Columns></DataGrid></Expander>
