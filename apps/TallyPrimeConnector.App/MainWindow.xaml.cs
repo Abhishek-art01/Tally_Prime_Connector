@@ -117,4 +117,16 @@ public partial class MainWindow : Window
     {
         if (LedgerPopup != null && !LedgerPopup.IsOpen) LedgerPopup.IsOpen = true;
     }
+
+    private void Window_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (LedgerPopup != null && LedgerPopup.IsOpen)
+        {
+            var target = e.OriginalSource as DependencyObject;
+            if (target != null && FindAncestor<TextBox>(target) != LedgerSearchBox)
+            {
+                LedgerPopup.IsOpen = false;
+            }
+        }
+    }
 }

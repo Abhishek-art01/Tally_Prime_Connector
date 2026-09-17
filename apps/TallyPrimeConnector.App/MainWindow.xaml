@@ -10,7 +10,8 @@
         MinHeight="480"
         WindowStartupLocation="Manual"
         Background="#F1F5F9"
-        FontFamily="Segoe UI">
+        FontFamily="Segoe UI"
+        PreviewMouseDown="Window_PreviewMouseDown">
     <Window.Resources>
         <SolidColorBrush x:Key="Accent" Color="#0067C0" />
         <SolidColorBrush x:Key="Border" Color="#E2E8F0" />
@@ -169,14 +170,16 @@
                                 <TextBlock Style="{StaticResource Label}" Text="Search &amp; Select Ledgers" />
                                 <Grid>
                                     <TextBox x:Name="LedgerSearchBox" Style="{StaticResource Input}" Text="{Binding LedgerSearch, UpdateSourceTrigger=PropertyChanged}" GotKeyboardFocus="LedgerSearchBox_GotKeyboardFocus" PreviewMouseLeftButtonUp="LedgerSearchBox_PreviewMouseLeftButtonUp" />
-                                    <Popup x:Name="LedgerPopup" PlacementTarget="{Binding ElementName=LedgerSearchBox}" StaysOpen="False" MaxHeight="300" MinWidth="{Binding ElementName=LedgerSearchBox, Path=ActualWidth}">
+                                    <Popup x:Name="LedgerPopup" PlacementTarget="{Binding ElementName=LedgerSearchBox}" Placement="Bottom" StaysOpen="True" MaxHeight="300" Width="{Binding ElementName=LedgerSearchBox, Path=ActualWidth}">
                                         <Border Background="White" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="4" Margin="0,2,0,0">
                                             <StackPanel>
                                                 <Button Style="{StaticResource SecondaryButton}" Content="Select all" Command="{Binding SelectAllLedgersCommand}" Margin="4" BorderThickness="0" Background="#F8FAFC" />
                                                 <ListBox ItemsSource="{Binding FilteredLedgerSelections}" BorderThickness="0" MaxHeight="200" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                                     <ListBox.ItemTemplate>
                                                         <DataTemplate>
-                                                            <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Ledger.Name}" VerticalAlignment="Center" Margin="0,2" />
+                                                            <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Center" Margin="0,2">
+                                                                <TextBlock Text="{Binding Ledger.Name}" TextWrapping="Wrap" />
+                                                            </CheckBox>
                                                         </DataTemplate>
                                                     </ListBox.ItemTemplate>
                                                 </ListBox>
