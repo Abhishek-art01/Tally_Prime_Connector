@@ -39,7 +39,7 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
 {
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private CancellationTokenSource? _extractionCancellation;
-    private string _selectedPage = "Dashboard", _host = "localhost", _port = "9000", _connectionResult = "No connection test has been run.", _ledgerSearch = "", _placeholderLedgerText = "Search ledgers...", _batchDays = LedgerWiseExtractionRequest.DefaultBatchDays.ToString(), _lastExportPath = "", _extractionStatus = "Select a company, dates, one or more ledgers, and an output file.";
+    private string _selectedPage = "Dashboard", _host = "localhost", _port = "9000", _connectionResult = "No connection test has been run.", _ledgerSearch = "", _placeholderLedgerText = "Search ledgers...", _batchDays = LedgerWiseExtractionRequest.DefaultBatchDays.ToString(), _extractionStatus = "Select a company, dates, one or more ledgers, and an output file.";
     private string _companySearch = "", _placeholderCompanyText = "Search companies...", _groupSearch = "", _placeholderGroupText = "Search groups...";
     private DateTime? _fromDate = DateTime.Today, _toDate = DateTime.Today;
     private bool _isSidebarCollapsed;
@@ -94,7 +94,6 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     public DateTime? FromDate { get => _fromDate; set { _fromDate = value; OnChanged(); } }
     public DateTime? ToDate { get => _toDate; set { _toDate = value; OnChanged(); } }
     public string BatchDays { get => _batchDays; set { _batchDays = value; OnChanged(); } }
-    public string LastExportPath { get => _lastExportPath; private set { _lastExportPath = value; OnChanged(); } }
     public string ExtractionStatus { get => _extractionStatus; set { _extractionStatus = value; OnChanged(); } }
     public GridLength SidebarWidth => new(_isSidebarCollapsed ? 0 : 208);
 
@@ -104,7 +103,6 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     public ICommand LoadLedgersCommand => new AsyncCommand(LoadLedgersAsync);
     public ICommand SelectAllGroupsCommand => new RelayCommand(SelectAllGroups);
     public ICommand SelectAllLedgersCommand => new RelayCommand(SelectAllLedgers);
-    public ICommand RevealExportCommand => new RelayCommand(RevealExport);
     public ICommand ExtractCommand => new AsyncCommand(ExtractAndExportAsync);
     public ICommand CancelExtractionCommand => new RelayCommand(() => _extractionCancellation?.Cancel());
     public ICommand ToggleSidebarCommand => new RelayCommand(() =>
@@ -256,13 +254,6 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
             : $"All {LedgerSelections.Count} loaded ledgers are {(targetState ? "selected" : "cleared")}.";
     }
 
-    private void RevealExport()
-    {
-        if (string.IsNullOrWhiteSpace(LastExportPath) || !File.Exists(LastExportPath)) { ExtractionStatus = "No generated workbook is available to reveal."; return; }
-        try { Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{LastExportPath}\"") { UseShellExecute = true }); }
-        catch { ExtractionStatus = "The workbook was created, but its folder could not be opened automatically."; }
-    }
-
     private async Task ExtractAndExportAsync()
     {
         if (SelectedCompany is null) { ExtractionStatus = "No company selected. Please select a company first."; return; }
@@ -299,7 +290,6 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
             var result = await exportService.ExtractAndExportAsync(request, progress, _extractionCancellation.Token);
             Vouchers.Clear();
             foreach (var voucher in result.Extraction.Ledgers.SelectMany(x => x.Transactions).Select(x => x.Voucher).DistinctBy(x => x.Guid ?? x.MasterId ?? x.SourceId)) Vouchers.Add(voucher);
-            LastExportPath = result.OutputPath;
             ExtractionStatus = $"Completed export for {SelectedCompany.Name}. {result.Extraction.TotalVoucherCount} vouchers, {result.Extraction.TotalMatchedTransactionCount} ledger transactions. Saved: {result.OutputPath}";
         }
         catch (OperationCanceledException) { ExtractionStatus = "Extraction cancelled. No completion result was generated."; }
