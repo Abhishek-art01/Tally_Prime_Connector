@@ -19,10 +19,13 @@ Requires .NET 10 SDK and Node.js 22+.
 ```powershell
 dotnet build TallyPrimeConnector.sln
 dotnet test TallyPrimeConnector.sln
+./run-app.ps1
 cd apps/TallyPrimeConnector.Site
 npm install
 npm run dev
 ```
+
+If PowerShell's execution policy blocks the launcher, run `powershell -ExecutionPolicy Bypass -File .\run-app.ps1` from the repository root. Use `./run-app.ps1 -Configuration Release` for a Release build.
 
 `Development` uses a mock Tally provider, so a live Tally installation is not necessary for UI development.
 

@@ -6,3 +6,4 @@ obj/
 *.log
 apps/TallyPrimeConnector.Site/node_modules/
 apps/TallyPrimeConnector.Site/.next/
+*.tsbuildinfo
