@@ -23,7 +23,8 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
 {
     private readonly CancellationTokenSource _lifetimeCancellation = new();
     private CancellationTokenSource? _extractionCancellation;
-    private string _selectedPage = "Dashboard", _host = "localhost", _port = "9000", _connectionResult = "No connection test has been run.", _ledgerSearch = "", _fromDate = DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd"), _toDate = DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd"), _batchDays = LedgerWiseExtractionRequest.DefaultBatchDays.ToString(), _exportPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Tally Ledger Export.xlsx"), _lastExportPath = "", _extractionStatus = "Select a company, dates, one or more ledgers, and an output file.";
+    private string _selectedPage = "Dashboard", _host = "localhost", _port = "9000", _connectionResult = "No connection test has been run.", _ledgerSearch = "", _batchDays = LedgerWiseExtractionRequest.DefaultBatchDays.ToString(), _exportPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Tally Ledger Export.xlsx"), _lastExportPath = "", _extractionStatus = "Select a company, dates, one or more ledgers, and an output file.";
+    private DateTime? _fromDate = DateTime.Today, _toDate = DateTime.Today;
     private bool _isSidebarCollapsed;
     private CompanyInfo? _selectedCompany;
     private GroupInfo? _selectedGroup;
@@ -43,8 +44,8 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     public string ConnectionResult { get => _connectionResult; set { _connectionResult = value; OnChanged(); } }
     public string LedgerSearch { get => _ledgerSearch; set { _ledgerSearch = value; OnChanged(); OnChanged(nameof(FilteredLedgerSelections)); } }
     public IEnumerable<LedgerSelectionItem> FilteredLedgerSelections => LedgerSelections.Where(x => string.IsNullOrWhiteSpace(LedgerSearch) || x.Ledger.Name.Contains(LedgerSearch, StringComparison.OrdinalIgnoreCase));
-    public string FromDate { get => _fromDate; set { _fromDate = value; OnChanged(); } }
-    public string ToDate { get => _toDate; set { _toDate = value; OnChanged(); } }
+    public DateTime? FromDate { get => _fromDate; set { _fromDate = value; OnChanged(); } }
+    public DateTime? ToDate { get => _toDate; set { _toDate = value; OnChanged(); } }
     public string BatchDays { get => _batchDays; set { _batchDays = value; OnChanged(); } }
     public string ExportPath { get => _exportPath; set { _exportPath = value; OnChanged(); } }
     public string LastExportPath { get => _lastExportPath; private set { _lastExportPath = value; OnChanged(); } }
@@ -57,6 +58,7 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     public ICommand LoadCompaniesCommand => new AsyncCommand(LoadCompaniesAsync);
     public ICommand LoadGroupsCommand => new AsyncCommand(LoadGroupsAsync);
     public ICommand LoadLedgersCommand => new AsyncCommand(LoadLedgersAsync);
+    public ICommand SelectAllLedgersCommand => new RelayCommand(SelectAllLedgers);
     public ICommand ChooseExportPathCommand => new RelayCommand(ChooseExportPath);
     public ICommand RevealExportCommand => new RelayCommand(RevealExport);
     public ICommand ExtractCommand => new AsyncCommand(ExtractAndExportAsync);
@@ -158,6 +160,18 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
         return false;
     }
 
+    private void SelectAllLedgers()
+    {
+        foreach (var ledger in LedgerSelections)
+        {
+            ledger.IsSelected = true;
+        }
+
+        ExtractionStatus = LedgerSelections.Count == 0
+            ? "No ledgers are loaded to select."
+            : $"All {LedgerSelections.Count} loaded ledgers are selected.";
+    }
+
     private void ChooseExportPath()
     {
         var dialog = new SaveFileDialog { Filter = "Excel Workbook (*.xlsx)|*.xlsx", DefaultExt = ".xlsx", AddExtension = true, FileName = Path.GetFileName(ExportPath) };
@@ -174,7 +188,10 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
     private async Task ExtractAndExportAsync()
     {
         if (SelectedCompany is null) { ExtractionStatus = "The selected company is not available."; return; }
-        if (!DateOnly.TryParse(FromDate, out var from) || !DateOnly.TryParse(ToDate, out var to) || from > to) { ExtractionStatus = "From Date must be on or before To Date, using YYYY-MM-DD."; return; }
+        if (FromDate is not { } fromDate || ToDate is not { } toDate) { ExtractionStatus = "Select both dates using the calendar."; return; }
+        var from = DateOnly.FromDateTime(fromDate);
+        var to = DateOnly.FromDateTime(toDate);
+        if (from > to) { ExtractionStatus = "From Date must be on or before To Date."; return; }
         if (!int.TryParse(BatchDays, out var batchDays) || batchDays < 1) { ExtractionStatus = "Batch size must be at least one day."; return; }
         var selectedLedgers = LedgerSelections.Where(x => x.IsSelected).Select(x => x.Ledger).ToList();
         if (selectedLedgers.Count == 0) { ExtractionStatus = "No selected ledgers were provided."; return; }

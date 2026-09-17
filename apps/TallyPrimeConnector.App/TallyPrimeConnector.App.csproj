@@ -5,5 +5,5 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" /><PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" /><PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" /><PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" /><PackageReference Include="Serilog.Settings.Configuration" Version="9.0.0" /><PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
   </ItemGroup>
   <ItemGroup><None Update="appsettings.json"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None></ItemGroup>
-  <ItemGroup><Resource Include="Assets\tally-connector-icon.png" /></ItemGroup>
+  <ItemGroup><Resource Include="Assets\tally-connector-icon.png" /><Resource Include="Assets\tally-connector-logo.png" /></ItemGroup>
 </Project>
