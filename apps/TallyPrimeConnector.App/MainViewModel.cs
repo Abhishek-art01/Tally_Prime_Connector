@@ -145,6 +145,8 @@ public sealed class MainViewModel(IConnectionService connectionService, ICompany
             ExtractionStatus = LedgerSelections.Count == 0
                 ? $"No ledgers belong to the selected group '{selectedGroup.Name}'."
                 : $"{LedgerSelections.Count} ledgers loaded from '{selectedGroup.Name}'. Tick one or more exact ledger names for export.";
+
+            LedgerSearch = LedgerSelections.Count > 0 ? LedgerSelections[0].Ledger.Name : "";
         }
         catch (Exception exception) { ExtractionStatus = "Unable to load ledgers from TallyPrime: " + exception.Message; }
     }
