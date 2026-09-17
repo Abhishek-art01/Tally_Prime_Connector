@@ -150,16 +150,69 @@
                     <Border Grid.Column="2" Padding="8,4" Background="#ECFDF5" BorderBrush="#A7F3D0" BorderThickness="1" CornerRadius="12" VerticalAlignment="Center"><StackPanel Orientation="Horizontal"><Ellipse Width="6" Height="6" Fill="#10B981" VerticalAlignment="Center" Margin="0,0,5,0" /><TextBlock Text="{Binding Host}" FontSize="10" Foreground="#047857" /><TextBlock Text=":" FontSize="10" Foreground="#047857" /><TextBlock Text="{Binding Port}" FontSize="10" Foreground="#047857" /></StackPanel></Border>
                 </Grid>
 
-                <Border Style="{StaticResource Card}">
-                    <Grid>
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="110" /><ColumnDefinition Width="90" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                        <StackPanel Margin="0,0,10,0"><TextBlock Style="{StaticResource Label}" Text="Host" /><TextBox Style="{StaticResource Input}" Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
-                        <StackPanel Grid.Column="1" Margin="0,0,10,0"><TextBlock Style="{StaticResource Label}" Text="Port" /><TextBox Style="{StaticResource Input}" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
-                        <StackPanel Grid.Column="2" Margin="0,0,10,0"><TextBlock Style="{StaticResource Label}" Text="Batch days" /><TextBox Style="{StaticResource Input}" Text="{Binding BatchDays, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
-                        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom"><Button Style="{StaticResource PrimaryButton}" Content="Test" Command="{Binding TestConnectionCommand}" Margin="0,0,8,0" /><Button Style="{StaticResource SecondaryButton}" Content="Load company" Command="{Binding LoadCompaniesCommand}" /></StackPanel>
-                    </Grid>
+                <!-- ═══ SETTINGS PAGE ═══ -->
+                <StackPanel>
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedPage}" Value="Settings">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+
+                    <TextBlock Text="Connection" FontSize="13" FontWeight="SemiBold" Foreground="#1E293B" Margin="0,0,0,8" />
+                    <Border Style="{StaticResource Card}">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="110" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,10,0"><TextBlock Style="{StaticResource Label}" Text="Host" /><TextBox Style="{StaticResource Input}" Text="{Binding Host, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
+                            <StackPanel Grid.Column="1" Margin="0,0,10,0"><TextBlock Style="{StaticResource Label}" Text="Port" /><TextBox Style="{StaticResource Input}" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom"><Button Style="{StaticResource PrimaryButton}" Content="Test connection" Command="{Binding TestConnectionCommand}" /></StackPanel>
+                        </Grid>
+                    </Border>
+                    <TextBlock Text="{Binding ConnectionResult}" Margin="4,-8,4,14" FontSize="11" Foreground="#64748B" TextWrapping="Wrap" />
+
+                    <TextBlock Text="Extraction" FontSize="13" FontWeight="SemiBold" Foreground="#1E293B" Margin="0,8,0,8" />
+                    <Border Style="{StaticResource Card}">
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <StackPanel Margin="0,0,10,0">
+                                <TextBlock Style="{StaticResource Label}" Text="Batch Days" />
+                                <TextBox Style="{StaticResource Input}" Text="{Binding BatchDays, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Text="Number of days fetched per request to Tally. Lower = safer for large date ranges. Default: 31." FontSize="10" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <!-- ═══ DASHBOARD PAGE ═══ -->
+                <StackPanel>
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedPage}" Value="Dashboard">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+
+                <!-- Connection status bar (compact) -->
+                <Border Style="{StaticResource Card}" Margin="0,0,0,0">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Style="{StaticResource PrimaryButton}" Content="Test" Command="{Binding TestConnectionCommand}" Margin="8,0,0,0" />
+                            <Button Style="{StaticResource SecondaryButton}" Content="Load company" Command="{Binding LoadCompaniesCommand}" Margin="8,0,0,0" />
+                        </StackPanel>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource Label}" Text="Tally connection" />
+                            <TextBlock Text="{Binding ConnectionResult}" FontSize="11" Foreground="#64748B" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </DockPanel>
                 </Border>
-                <TextBlock Text="{Binding ConnectionResult}" Margin="4,-8,4,14" FontSize="11" Foreground="#64748B" TextTrimming="CharacterEllipsis" />
 
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
@@ -298,12 +351,18 @@
                             <Grid.ColumnDefinitions><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="1.1*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                             <StackPanel Margin="0,0,10,0"><TextBlock Style="{StaticResource Label}" Text="From" /><local:IndianDatePicker Style="{StaticResource DateInput}" SelectedDate="{Binding FromDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
                             <StackPanel Grid.Column="1" Margin="0,0,10,0"><TextBlock Style="{StaticResource Label}" Text="To" /><local:IndianDatePicker Style="{StaticResource DateInput}" SelectedDate="{Binding ToDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" /></StackPanel>
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom"><Button Style="{StaticResource PrimaryButton}" Content="Export Excel" Command="{Binding ExtractCommand}" Margin="0,0,8,0" /><Button Style="{StaticResource SecondaryButton}" Content="Cancel" Command="{Binding CancelExtractionCommand}" /></StackPanel>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Bottom">
+                                <Button Style="{StaticResource PrimaryButton}" Content="Export Excel" Command="{Binding ExtractCommand}" Margin="0,0,8,0" />
+                                <Button Style="{StaticResource SecondaryButton}" Content="Cancel" Command="{Binding CancelExtractionCommand}" Margin="0,0,8,0" />
+                                <Button Style="{StaticResource SecondaryButton}" Content="Reveal" Command="{Binding RevealExportCommand}" />
+                            </StackPanel>
                         </Grid>
-                        <DockPanel><StackPanel DockPanel.Dock="Right" Orientation="Horizontal"><Button Style="{StaticResource SecondaryButton}" Content="Choose file" Command="{Binding ChooseExportPathCommand}" Margin="8,0,0,0" /><Button Style="{StaticResource SecondaryButton}" Content="Reveal" Command="{Binding RevealExportCommand}" Margin="8,0,0,0" /></StackPanel><TextBox Style="{StaticResource Input}" Text="{Binding ExportPath, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" /></DockPanel>
-                        <Expander Header="Preview" Margin="0,14,0,0"><DataGrid ItemsSource="{Binding Vouchers}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" Height="160" Margin="0,8,0,0" BorderBrush="{StaticResource Border}"><DataGrid.Columns><DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat={}{0:yyyy-MM-dd}}" Width="95" /><DataGridTextColumn Header="Type" Binding="{Binding VoucherType}" Width="130" /><DataGridTextColumn Header="Number" Binding="{Binding VoucherNumber}" Width="130" /><DataGridTextColumn Header="Party" Binding="{Binding PartyLedger}" Width="*" /></DataGrid.Columns></DataGrid></Expander>
+                        <Expander Header="Preview" Margin="0,4,0,0"><DataGrid ItemsSource="{Binding Vouchers}" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" Height="160" Margin="0,8,0,0" BorderBrush="{StaticResource Border}"><DataGrid.Columns><DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat={}{0:yyyy-MM-dd}}" Width="95" /><DataGridTextColumn Header="Type" Binding="{Binding VoucherType}" Width="130" /><DataGridTextColumn Header="Number" Binding="{Binding VoucherNumber}" Width="130" /><DataGridTextColumn Header="Party" Binding="{Binding PartyLedger}" Width="*" /></DataGrid.Columns></DataGrid></Expander>
                     </StackPanel>
                 </Border>
+                </StackPanel>
+                <!-- end Dashboard -->
+
             </StackPanel>
         </ScrollViewer>
     </Grid>
