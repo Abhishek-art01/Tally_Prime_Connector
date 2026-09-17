@@ -167,16 +167,23 @@
                             <StackPanel Grid.Column="1" Margin="0,0,10,0"><TextBlock Style="{StaticResource Label}" Text="Group" /><DockPanel><Button DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" Content="Ledgers" Command="{Binding LoadLedgersCommand}" Margin="8,0,0,0" /><ComboBox Style="{StaticResource Select}" ItemsSource="{Binding Groups}" SelectedItem="{Binding SelectedGroup}" DisplayMemberPath="Name" /></DockPanel></StackPanel>
                             <StackPanel Grid.Column="2">
                                 <TextBlock Style="{StaticResource Label}" Text="Search &amp; Select Ledgers" />
-                                <DockPanel>
-                                    <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Content="All" Command="{Binding SelectAllLedgersCommand}" Margin="8,0,0,0" />
-                                    <ComboBox Style="{StaticResource Select}" IsEditable="True" Text="{Binding LedgerSearch, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding FilteredLedgerSelections}" StaysOpenOnEdit="True">
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Ledger.Name}" VerticalAlignment="Center" Margin="0,2" />
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-                                </DockPanel>
+                                <Grid>
+                                    <TextBox x:Name="LedgerSearchBox" Style="{StaticResource Input}" Text="{Binding LedgerSearch, UpdateSourceTrigger=PropertyChanged}" GotFocus="LedgerSearchBox_GotFocus" PreviewMouseDown="LedgerSearchBox_PreviewMouseDown" />
+                                    <Popup x:Name="LedgerPopup" PlacementTarget="{Binding ElementName=LedgerSearchBox}" StaysOpen="False" MaxHeight="300" MinWidth="{Binding ElementName=LedgerSearchBox, Path=ActualWidth}">
+                                        <Border Background="White" BorderBrush="{StaticResource Border}" BorderThickness="1" CornerRadius="4" Margin="0,2,0,0">
+                                            <StackPanel>
+                                                <Button Style="{StaticResource SecondaryButton}" Content="Select all" Command="{Binding SelectAllLedgersCommand}" Margin="4" BorderThickness="0" Background="#F8FAFC" />
+                                                <ListBox ItemsSource="{Binding FilteredLedgerSelections}" BorderThickness="0" MaxHeight="200" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                                    <ListBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <CheckBox IsChecked="{Binding IsSelected}" Content="{Binding Ledger.Name}" VerticalAlignment="Center" Margin="0,2" />
+                                                        </DataTemplate>
+                                                    </ListBox.ItemTemplate>
+                                                </ListBox>
+                                            </StackPanel>
+                                        </Border>
+                                    </Popup>
+                                </Grid>
                             </StackPanel>
                         </Grid>
                         <TextBlock Text="{Binding ExtractionStatus}" Margin="4,10,4,0" FontSize="11" Foreground="#64748B" TextTrimming="CharacterEllipsis" />
